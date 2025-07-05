@@ -1,0 +1,43 @@
+# Renewable Energy Investment Analysis Requirements
+# Core data analysis and scientific computing
+pandas>=1.5.0
+numpy>=1.21.0
+scipy>=1.9.0
+
+# Financial data and analysis
+yfinance>=0.2.0
+alpha-vantage>=2.3.1
+
+# Database connectivity
+psycopg2-binary>=2.9.0
+sqlalchemy>=1.4.0
+
+# Data visualization
+matplotlib>=3.5.0
+seaborn>=0.11.0
+plotly>=5.0.0
+
+# Machine learning and optimization
+scikit-learn>=1.1.0
+
+# Text processing and sentiment analysis
+textblob>=0.17.0
+nltk>=3.7
+
+# API requests
+requests>=2.28.0
+
+# Date and time handling
+python-dateutil>=2.8.0
+
+# Jupyter notebook support
+jupyter>=1.0.0
+ipykernel>=6.0.0
+
+# Logging and configuration
+python-dotenv>=0.19.0
+
+# Additional utilities
+tqdm>=4.64.0
+openpyxl>=3.0.0
+xlrd>=2.0.0 
