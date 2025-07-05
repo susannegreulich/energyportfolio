@@ -19,7 +19,7 @@ I have successfully built a comprehensive investment analysis system for the top
 - **Views**: Pre-built views for common queries
 - **Indexes**: Optimized for performance
 
-### 3. **Data Pipeline** (`enhanced_fetch_data.py`)
+### 3. **Data Pipeline** (`fetch_data.py`)
 - **Multi-Source Data**: Yahoo Finance, Finnhub API, Alpha Vantage
 - **Financial Statements**: Income statements, balance sheets, cash flow
 - **News Sentiment**: Automated sentiment analysis of news articles

@@ -53,7 +53,7 @@ This project analyzes the following top renewable energy companies:
 energy_investment_project/
 ├── config.py                    # Configuration settings
 ├── database.py                 # Database connection and operations
-├── enhanced_fetch_data.py      # Enhanced data fetching with database integration
+├── fetch_data.py      # Enhanced data fetching with database integration
 ├── investment_analysis.py      # Core investment analysis engine
 ├── main.py                     # Unified analysis orchestration script (NEW)
 ├── powerbi_export.py           # Legacy PowerBI data export utilities
@@ -106,21 +106,21 @@ energy_investment_project/
 
 **NEW: Unified Data Collection System**
 
-The system now uses a unified approach where `enhanced_fetch_data.py` collects all data once and exports to both CSV (for PowerBI) and database (for main analysis).
+The system now uses a unified approach where `fetch_data.py` collects all data once and exports to both CSV (for PowerBI) and database (for main analysis).
 
 1. **Run the complete analysis** (recommended):
    ```bash
    python main.py
    ```
    This will:
-   - Call `enhanced_fetch_data.py` to collect all data once
+   - Call `fetch_data.py` to collect all data once
    - Export CSV files for PowerBI
    - Load data to database for main analysis
    - Generate analysis reports and charts
 
 2. **Run data collection only**:
    ```bash
-   python enhanced_fetch_data.py
+   python fetch_data.py
    ```
    This will:
    - Collect all data once from Yahoo Finance
@@ -137,7 +137,7 @@ The system now uses a unified approach where `enhanced_fetch_data.py` collects a
    - Check `charts/` for technical analysis charts
    - Check `powerbi/data/` for PowerBI-ready data files
 
-**Note**: The old `powerbi_export.py` script is still available but the unified `enhanced_fetch_data.py` is now more efficient.
+**Note**: The old `powerbi_export.py` script is still available but the unified `fetch_data.py` is now more efficient.
 
 ## 📈 Analysis Workflow
 
@@ -315,7 +315,7 @@ For questions or issues:
 
 ## 🔄 Updates and Maintenance
 
-- **Data Updates**: Run `python enhanced_fetch_data.py` to update data
+- **Data Updates**: Run `python fetch_data.py` to update data
 - **Analysis Updates**: Run `python main.py` for fresh analysis
 - **PowerBI Updates**: Run `python powerbi_export.py` for new data exports
 
@@ -336,7 +336,7 @@ Complete PostgreSQL schema with 8 tables
 Optimized queries and indexes
 Pre-built views for common analyses
 Efficient data management
- Data Pipeline (enhanced_fetch_data.py)
+ Data Pipeline (fetch_data.py)
 Multi-source data collection (Yahoo Finance, Finnhub, Alpha Vantage)
 Financial statements analysis
 News sentiment analysis

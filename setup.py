@@ -148,20 +148,15 @@ def update_config_py(db_host, db_port, db_name, db_user, db_password):
     new_lines = []
     for line in lines:
         if line.strip().startswith("DB_HOST"):
-            new_lines.append(f'DB_HOST = "{db_host}"
-')
+            new_lines.append(f'DB_HOST = "{db_host}"\n')
         elif line.strip().startswith("DB_PORT"):
-            new_lines.append(f'DB_PORT = {db_port}
-')
+            new_lines.append(f'DB_PORT = {db_port}\n')
         elif line.strip().startswith("DB_NAME"):
-            new_lines.append(f'DB_NAME = "{db_name}"
-')
+            new_lines.append(f'DB_NAME = "{db_name}"\n')
         elif line.strip().startswith("DB_USER"):
-            new_lines.append(f'DB_USER = "{db_user}"
-')
+            new_lines.append(f'DB_USER = "{db_user}"\n')
         elif line.strip().startswith("DB_PASSWORD"):
-            new_lines.append(f'DB_PASSWORD = "{db_password}"
-')
+            new_lines.append(f'DB_PASSWORD = "{db_password}"\n')
         else:
             new_lines.append(line)
     with open(config_path, "w") as f:
@@ -169,9 +164,9 @@ def update_config_py(db_host, db_port, db_name, db_user, db_password):
     print("✅ config.py updated.")
 
 def create_config_template():
-    """Create config template if it doesn't exist"""
+    """Create config.py if it doesn't exist"""
     if not os.path.exists("config.py"):
-        print("\n⚙️ Creating config.py template...")
+        print("\n⚙️ Creating config.py...")
         config_content = '''# Configuration file for Renewable Energy Investment Analysis
 # Copy this file to config.py and add your actual API keys
 
@@ -225,8 +220,10 @@ GROWTH_THRESHOLD = 0.10     # Revenue growth threshold
 '''
         with open("config.py", "w") as f:
             f.write(config_content)
-        print("✅ Created config.py template")
-        print("⚠️  Please update config.py with your database credentials and API keys")
+        print("✅ Created config.py")
+        print("⚠️  Please update config.py with your API keys if needed")
+    else:
+        print("✅ config.py already exists")
 
 def test_imports():
     """Test if all required modules can be imported"""
@@ -313,7 +310,7 @@ def main():
     check_create_db_user(db_user, db_password)
     check_create_database(db_name, db_user)
     
-    # Update config.py
+    # Update config.py with database credentials
     update_config_py(db_host, db_port, db_name, db_user, db_password)
     
     # Test imports

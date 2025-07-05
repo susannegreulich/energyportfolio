@@ -35,6 +35,12 @@ class DatabaseManager:
             return True
         except Exception as e:
             logger.error(f"Failed to connect to database: {e}")
+            logger.warning("Database connection failed. The application will continue without database functionality.")
+            logger.warning("To fix this issue:")
+            logger.warning("1. Ensure PostgreSQL is running")
+            logger.warning("2. Update config.py with correct database credentials")
+            logger.warning("3. Create the database: createdb energy_investment_db")
+            logger.warning("4. Or run setup.py to configure the database automatically")
             return False
     
     def disconnect(self):
@@ -306,6 +312,70 @@ class DatabaseManager:
             df = pd.DataFrame(result, columns=columns)
             return df
         return pd.DataFrame()
+    
+    def insert_company_summary(self, summary_data):
+        """Insert company summary data"""
+        query = """
+        INSERT INTO companies (ticker, company_name, sector, industry, country, market_cap, description)
+        VALUES (:ticker, :company_name, :sector, :industry, :country, :market_cap, :description)
+        ON CONFLICT (ticker) DO UPDATE SET
+            company_name = EXCLUDED.company_name,
+            sector = EXCLUDED.sector,
+            industry = EXCLUDED.industry,
+            country = EXCLUDED.country,
+            market_cap = EXCLUDED.market_cap,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+        """
+        
+        params = {
+            'ticker': summary_data.get('ticker'),
+            'company_name': summary_data.get('company_name'),
+            'sector': summary_data.get('sector', 'Renewable Energy'),
+            'industry': summary_data.get('industry', 'Renewable Energy'),
+            'country': summary_data.get('country', 'Unknown'),
+            'market_cap': summary_data.get('market_cap'),
+            'description': summary_data.get('description', f"{summary_data.get('company_name')} - Renewable Energy Company")
+        }
+        
+        self.execute_query(query, params)
+        logger.info(f"Company summary inserted for {summary_data.get('ticker')}")
+    
+    def insert_stock_price(self, price_data):
+        """Insert stock price data"""
+        # Get company_id
+        company_query = "SELECT company_id FROM companies WHERE ticker = :ticker"
+        result = self.execute_query(company_query, {'ticker': price_data['ticker']})
+        if not result:
+            logger.warning(f"Company {price_data['ticker']} not found in database")
+            return
+        
+        company_id = result[0][0]
+        
+        query = """
+        INSERT INTO stock_prices (company_id, date, open_price, high_price, low_price, close_price, adjusted_close, volume)
+        VALUES (:company_id, :date, :open_price, :high_price, :low_price, :close_price, :adjusted_close, :volume)
+        ON CONFLICT (company_id, date) DO UPDATE SET
+            open_price = EXCLUDED.open_price,
+            high_price = EXCLUDED.high_price,
+            low_price = EXCLUDED.low_price,
+            close_price = EXCLUDED.close_price,
+            adjusted_close = EXCLUDED.adjusted_close,
+            volume = EXCLUDED.volume
+        """
+        
+        params = {
+            'company_id': company_id,
+            'date': price_data['date'] if isinstance(price_data['date'], dt_date) else price_data['date'].date(),
+            'open_price': self._convert_numpy_types(price_data['open']),
+            'high_price': self._convert_numpy_types(price_data['high']),
+            'low_price': self._convert_numpy_types(price_data['low']),
+            'close_price': self._convert_numpy_types(price_data['close']),
+            'adjusted_close': self._convert_numpy_types(price_data.get('adjusted_close', price_data['close'])),
+            'volume': self._convert_numpy_types(price_data['volume'])
+        }
+        
+        self.execute_query(query, params)
 
 def create_database():
     """Create database and tables"""
@@ -383,7 +453,18 @@ def create_database():
             logger.info("Database indexes created successfully")
             db_manager.disconnect()
             return True
+        else:
+            logger.error("Failed to connect to database after creation")
+            return False
         
+    except psycopg2.OperationalError as e:
+        logger.error(f"Database connection failed: {e}")
+        logger.warning("This could be due to:")
+        logger.warning("1. PostgreSQL not running - start with: sudo systemctl start postgresql")
+        logger.warning("2. Wrong credentials - update config.py with correct username/password")
+        logger.warning("3. PostgreSQL not installed - install with: sudo apt-get install postgresql postgresql-contrib")
+        logger.warning("4. User 'postgres' doesn't exist - create with: sudo -u postgres createuser --interactive")
+        return False
     except Exception as e:
         logger.error(f"Failed to create database: {e}")
         return False

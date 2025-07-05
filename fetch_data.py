@@ -33,6 +33,9 @@ class EnhancedDataFetcher:
         
         # Create output directories
         os.makedirs('powerbi/data', exist_ok=True)
+        os.makedirs('analysis', exist_ok=True)
+        os.makedirs('reports', exist_ok=True)
+        os.makedirs('charts', exist_ok=True)
         
         # Filter out delisted companies (same as powerbi_export.py)
         companies_dict = {
@@ -334,12 +337,19 @@ class EnhancedDataFetcher:
                         prices['Ticker'] = ticker
                         prices['Company_Name'] = name
                         prices.reset_index(inplace=True)
+                        # Ensure the index column (now Date) is properly named and converted
+                        if 'Date' not in prices.columns:
+                            date_col = prices.columns[0]  # First column should be the date
+                            prices.rename(columns={date_col: 'Date'}, inplace=True)
+                        # Ensure Date column is datetime type
+                        prices['Date'] = pd.to_datetime(prices['Date'], errors='coerce')
                         all_prices.append(prices)
                 
                 if all_prices:
                     combined_prices = pd.concat(all_prices, ignore_index=True)
-                    
-                    # Add calculated fields
+                    # Ensure Date column is datetime type before using .dt
+                    combined_prices['Date'] = pd.to_datetime(combined_prices['Date'], errors='coerce')
+                    # Add calculated fields - now safe to use .dt accessor
                     combined_prices['Year'] = combined_prices['Date'].dt.year
                     combined_prices['Month'] = combined_prices['Date'].dt.month
                     combined_prices['Quarter'] = combined_prices['Date'].dt.quarter
@@ -580,9 +590,11 @@ class EnhancedDataFetcher:
             
         except Exception as e:
             logger.error(f"Error loading data to database: {e}")
+            logger.warning("Database loading failed, but the application will continue with CSV exports")
             return False
         finally:
-            self.db_manager.disconnect()
+            if self.db_manager.connection:
+                self.db_manager.disconnect()
     
     def run_unified_data_pipeline(self):
         """Run the complete unified data pipeline"""
@@ -632,6 +644,8 @@ class EnhancedDataFetcher:
 
 def main():
     """Main function to run the enhanced data fetching"""
+    logger.info("Starting data setup and collection...")
+    
     fetcher = EnhancedDataFetcher()
     
     print("Enhanced Renewable Energy Data Fetcher")
@@ -644,9 +658,11 @@ def main():
     if success:
         # Generate summary
         fetcher.generate_data_summary()
-        print("\nUnified data pipeline completed successfully!")
+        logger.info("Data setup completed successfully!")
+        print("\nData setup completed successfully!")
     else:
-        print("\nUnified data pipeline failed. Please check the logs for details.")
+        logger.error("Data setup failed. Please check the logs for details.")
+        print("\nData setup failed. Please check the logs for details.")
 
 if __name__ == "__main__":
     main() 
