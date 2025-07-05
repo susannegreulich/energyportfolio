@@ -257,9 +257,10 @@ class InvestmentAnalyzer:
     
     def generate_analysis_report(self, ticker, start_date=None, end_date=None):
         """Generate comprehensive analysis report for a company"""
-        print(f"\n{'='*60}")
-        print(f"COMPREHENSIVE ANALYSIS REPORT: {ticker}")
-        print(f"{'='*60}")
+        report_lines = []
+        report_lines.append(f"\n{'='*60}")
+        report_lines.append(f"COMPREHENSIVE ANALYSIS REPORT: {ticker}")
+        report_lines.append(f"{'='*60}")
         
         # Get stock data - try database first, fallback to yfinance
         prices = None
@@ -268,7 +269,7 @@ class InvestmentAnalyzer:
                 prices = self.db_manager.get_stock_prices(ticker, start_date, end_date)
                 self.db_manager.disconnect()
         except Exception as e:
-            print(f"Database connection failed, using yfinance: {e}")
+            report_lines.append(f"Database connection failed, using yfinance: {e}")
         
         if prices is None or prices.empty:
             # Fallback to yfinance
@@ -276,19 +277,19 @@ class InvestmentAnalyzer:
                 stock = yf.Ticker(ticker)
                 prices = stock.history(start=start_date or DATA_START_DATE, end=end_date or DATA_END_DATE)
             except Exception as e:
-                print(f"Error fetching data for {ticker}: {e}")
+                report_lines.append(f"Error fetching data for {ticker}: {e}")
                 return None
         
         if prices.empty:
-            print(f"No data available for {ticker}")
+            report_lines.append(f"No data available for {ticker}")
             return None
         
         # Calculate returns
         returns, cumulative_returns = self.calculate_returns(prices['Close'])
         
         # 1. Technical Analysis
-        print("\n1. TECHNICAL ANALYSIS")
-        print("-" * 30)
+        report_lines.append("\n1. TECHNICAL ANALYSIS")
+        report_lines.append("-" * 30)
         technical = self.technical_analysis(prices)
         
         current_price = prices['Close'].iloc[-1]
@@ -296,56 +297,56 @@ class InvestmentAnalyzer:
         sma_50_current = technical['SMA_50'].iloc[-1]
         rsi_current = technical['RSI'].iloc[-1]
         
-        print(f"Current Price: ${current_price:.2f}")
-        print(f"20-day SMA: ${sma_20_current:.2f}")
-        print(f"50-day SMA: ${sma_50_current:.2f}")
-        print(f"RSI: {rsi_current:.2f}")
+        report_lines.append(f"Current Price: ${current_price:.2f}")
+        report_lines.append(f"20-day SMA: ${sma_20_current:.2f}")
+        report_lines.append(f"50-day SMA: ${sma_50_current:.2f}")
+        report_lines.append(f"RSI: {rsi_current:.2f}")
         
         # Technical signals
         if current_price > sma_20_current > sma_50_current:
-            print("Technical Signal: BULLISH (Price above both SMAs)")
+            report_lines.append("Technical Signal: BULLISH (Price above both SMAs)")
         elif current_price < sma_20_current < sma_50_current:
-            print("Technical Signal: BEARISH (Price below both SMAs)")
+            report_lines.append("Technical Signal: BEARISH (Price below both SMAs)")
         else:
-            print("Technical Signal: NEUTRAL")
+            report_lines.append("Technical Signal: NEUTRAL")
         
         if rsi_current > 70:
-            print("RSI Signal: OVERBOUGHT")
+            report_lines.append("RSI Signal: OVERBOUGHT")
         elif rsi_current < 30:
-            print("RSI Signal: OVERSOLD")
+            report_lines.append("RSI Signal: OVERSOLD")
         else:
-            print("RSI Signal: NEUTRAL")
+            report_lines.append("RSI Signal: NEUTRAL")
         
         # 2. Risk Analysis
-        print("\n2. RISK ANALYSIS")
-        print("-" * 30)
+        report_lines.append("\n2. RISK ANALYSIS")
+        report_lines.append("-" * 30)
         risk_metrics = self.risk_analysis(returns)
         
         for metric, value in risk_metrics.items():
             if value is not None:
                 if 'Ratio' in metric or 'Return' in metric:
-                    print(f"{metric}: {value:.4f}")
+                    report_lines.append(f"{metric}: {value:.4f}")
                 elif 'Drawdown' in metric:
-                    print(f"{metric}: {value:.2%}")
+                    report_lines.append(f"{metric}: {value:.2%}")
                 else:
-                    print(f"{metric}: {value:.6f}")
+                    report_lines.append(f"{metric}: {value:.6f}")
         
         # 3. Fundamental Analysis
-        print("\n3. FUNDAMENTAL ANALYSIS")
-        print("-" * 30)
+        report_lines.append("\n3. FUNDAMENTAL ANALYSIS")
+        report_lines.append("-" * 30)
         fundamental = self.fundamental_analysis(ticker)
         
         if fundamental:
             for metric, value in fundamental.items():
                 if value is not None:
                     if 'Yield' in metric or 'Growth' in metric or 'Ratio' in metric:
-                        print(f"{metric}: {value:.4f}")
+                        report_lines.append(f"{metric}: {value:.4f}")
                     else:
-                        print(f"{metric}: {value:.2f}")
+                        report_lines.append(f"{metric}: {value:.2f}")
         
         # 4. Investment Recommendation
-        print("\n4. INVESTMENT RECOMMENDATION")
-        print("-" * 30)
+        report_lines.append("\n4. INVESTMENT RECOMMENDATION")
+        report_lines.append("-" * 30)
         
         score = 0
         reasons = []
@@ -407,11 +408,11 @@ class InvestmentAnalyzer:
         else:
             recommendation = "STRONG SELL"
         
-        print(f"Overall Score: {score}")
-        print(f"Recommendation: {recommendation}")
-        print("Key Factors:")
+        report_lines.append(f"Overall Score: {score}")
+        report_lines.append(f"Recommendation: {recommendation}")
+        report_lines.append("Key Factors:")
         for reason in reasons:
-            print(f"  • {reason}")
+            report_lines.append(f"  • {reason}")
         
         return {
             'ticker': ticker,
@@ -420,57 +421,23 @@ class InvestmentAnalyzer:
             'reasons': reasons,
             'technical': technical,
             'risk_metrics': risk_metrics,
-            'fundamental': fundamental
+            'fundamental': fundamental,
+            'report_text': '\n'.join(report_lines)
         }
     
     def analyze_all_companies(self):
         """Analyze all companies and generate comparative report"""
-        print(f"\n{'='*80}")
-        print("COMPREHENSIVE RENEWABLE ENERGY INVESTMENT ANALYSIS")
-        print(f"{'='*80}")
-        
         results = []
+        detailed_reports = []
         
         for name, ticker in self.companies.items():
-            print(f"\nAnalyzing {name} ({ticker})...")
             result = self.generate_analysis_report(ticker)
             if result:
                 results.append(result)
+                if 'report_text' in result:
+                    detailed_reports.append(result['report_text'])
         
-        # Generate comparative analysis
-        print(f"\n{'='*80}")
-        print("COMPARATIVE ANALYSIS SUMMARY")
-        print(f"{'='*80}")
-        
-        if results:
-            # Create summary DataFrame
-            summary_data = []
-            for result in results:
-                summary_data.append({
-                    'Ticker': result['ticker'],
-                    'Score': result['score'],
-                    'Recommendation': result['recommendation'],
-                    'Sharpe_Ratio': result['risk_metrics']['Sharpe_Ratio'],
-                    'Volatility': result['risk_metrics']['Volatility'],
-                    'Max_Drawdown': result['risk_metrics']['Max_Drawdown']
-                })
-            
-            summary_df = pd.DataFrame(summary_data)
-            summary_df = summary_df.sort_values('Score', ascending=False)
-            
-            print("\nRanked by Investment Score:")
-            print(summary_df.to_string(index=False))
-            
-            # Top recommendations
-            print(f"\nTOP RECOMMENDATIONS:")
-            top_picks = summary_df[summary_df['Score'] >= 2]
-            if not top_picks.empty:
-                for _, row in top_picks.iterrows():
-                    print(f"  • {row['Ticker']}: {row['Recommendation']} (Score: {row['Score']})")
-            else:
-                print("  No strong buy recommendations at this time.")
-        
-        return results
+        return results, detailed_reports
 
 if __name__ == "__main__":
     analyzer = InvestmentAnalyzer()

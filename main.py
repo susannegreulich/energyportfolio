@@ -1,6 +1,6 @@
 """
 Main Investment Analysis Script for Renewable Energy Companies
-Orchestrates the complete analysis pipeline
+Orchestrates the complete analysis pipeline using unified data collection
 """
 
 import pandas as pd
@@ -19,7 +19,7 @@ from enhanced_fetch_data import EnhancedDataFetcher
 from investment_analysis import InvestmentAnalyzer
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 class RenewableEnergyInvestmentAnalysis:
@@ -36,25 +36,19 @@ class RenewableEnergyInvestmentAnalysis:
         os.makedirs('reports', exist_ok=True)
         os.makedirs('charts', exist_ok=True)
         
-    def setup_database(self):
-        """Set up database and load initial data"""
-        logger.info("Setting up database...")
+    def setup_database_and_data(self):
+        """Set up database and load data using unified pipeline"""
+        logger.info("Setting up database and loading data using unified pipeline...")
         
         try:
-            # Create database and tables
-            if not create_database():
-                logger.warning("Failed to create database, continuing without database")
-                return True  # Continue without database
-            
-            # Load data
-            logger.info("Loading data into database...")
-            if not self.data_fetcher.load_data_to_database():
-                logger.warning("Failed to load data into database, continuing without database")
+            # Run the unified data pipeline (collects data, exports to CSV, loads to database)
+            if not self.data_fetcher.run_unified_data_pipeline():
+                logger.warning("Unified data pipeline failed, continuing without database")
                 return True  # Continue without database
             
             return True
         except Exception as e:
-            logger.warning(f"Database setup failed: {e}, continuing without database")
+            logger.warning(f"Database and data setup failed: {e}, continuing without database")
             return True  # Continue without database
     
     def generate_technical_charts(self, ticker, save_path=None):
@@ -201,7 +195,7 @@ class RenewableEnergyInvestmentAnalysis:
         try:
             if not self.db_manager.connect():
                 logger.warning("Database connection failed, skipping portfolio optimization")
-                return
+                return None
             
             # Get returns data for all companies
             all_returns = {}
@@ -214,7 +208,7 @@ class RenewableEnergyInvestmentAnalysis:
             
             if len(all_returns) < 2:
                 logger.warning("Insufficient data for portfolio optimization")
-                return
+                return None
             
             # Create returns DataFrame
             returns_df = pd.DataFrame(all_returns)
@@ -222,7 +216,7 @@ class RenewableEnergyInvestmentAnalysis:
             
             if returns_df.empty:
                 logger.warning("No valid returns data for portfolio optimization")
-                return
+                return None
             
             # Perform portfolio optimization
             optimization_results = {}
@@ -232,80 +226,73 @@ class RenewableEnergyInvestmentAnalysis:
                 if result:
                     optimization_results[method] = result
             
-            if not optimization_results:
-                logger.warning("Portfolio optimization failed")
-                return
-            
-            # Create optimization comparison chart
-            fig, axes = plt.subplots(2, 2, figsize=(15, 12))
-            fig.suptitle('Portfolio Optimization Analysis', fontsize=16)
-            
-            # Portfolio weights comparison
-            methods = list(optimization_results.keys())
-            tickers = list(returns_df.columns)
-            
-            for i, method in enumerate(methods):
-                weights = optimization_results[method]['weights']
-                axes[0, 0].bar([f"{ticker}\n({method})" for ticker in tickers], 
-                              weights, alpha=0.7, label=method)
-            
-            axes[0, 0].set_title('Portfolio Weights by Optimization Method')
-            axes[0, 0].set_ylabel('Weight')
-            axes[0, 0].tick_params(axis='x', rotation=45)
-            axes[0, 0].legend()
-            axes[0, 0].grid(True, alpha=0.3)
-            
-            # Risk-return comparison
-            returns_opt = []
-            risks_opt = []
-            sharpe_opt = []
-            
-            for method in methods:
-                result = optimization_results[method]
-                returns_opt.append(result['expected_return'])
-                risks_opt.append(result['volatility'])
-                sharpe_opt.append(result['sharpe_ratio'])
-            
-            axes[0, 1].scatter(risks_opt, returns_opt, s=100, alpha=0.7)
-            for i, method in enumerate(methods):
-                axes[0, 1].annotate(method, (risks_opt[i], returns_opt[i]), 
-                                  xytext=(5, 5), textcoords='offset points')
-            
-            axes[0, 1].set_xlabel('Portfolio Volatility')
-            axes[0, 1].set_ylabel('Expected Return')
-            axes[0, 1].set_title('Risk-Return Profile')
-            axes[0, 1].grid(True, alpha=0.3)
-            
-            # Sharpe ratio comparison
-            axes[1, 0].bar(methods, sharpe_opt, color='lightblue', alpha=0.7)
-            axes[1, 0].set_title('Sharpe Ratio by Optimization Method')
-            axes[1, 0].set_ylabel('Sharpe Ratio')
-            axes[1, 0].grid(True, alpha=0.3)
-            
-            # Backtest results for Sharpe-optimized portfolio
-            if 'sharpe' in optimization_results:
-                sharpe_weights = optimization_results['sharpe']['weights']
-                backtest = self.analyzer.backtest_portfolio(returns_df, sharpe_weights)
+            # Create visualization
+            if optimization_results:
+                fig, axes = plt.subplots(2, 2, figsize=(15, 12))
+                fig.suptitle('Portfolio Optimization Analysis', fontsize=16)
                 
-                axes[1, 1].plot(backtest['portfolio_values'].index, 
-                               backtest['portfolio_values'].values, 
-                               label='Portfolio Value', linewidth=2)
-                axes[1, 1].set_title('Portfolio Performance (Sharpe Optimized)')
-                axes[1, 1].set_ylabel('Portfolio Value ($)')
-                axes[1, 1].legend()
-                axes[1, 1].grid(True, alpha=0.3)
-            
-            plt.tight_layout()
-            
-            if save_path:
-                plt.savefig(save_path, dpi=300, bbox_inches='tight')
-                logger.info(f"Portfolio optimization chart saved to {save_path}")
-            else:
-                plt.show()
-            
-            plt.close()
-            
-            return optimization_results
+                # Risk-return scatter plot
+                methods = list(optimization_results.keys())
+                returns = [optimization_results[m]['expected_return'] for m in methods]
+                volatilities = [optimization_results[m]['volatility'] for m in methods]
+                
+                axes[0, 0].scatter(volatilities, returns, s=100, alpha=0.7)
+                for i, method in enumerate(methods):
+                    axes[0, 0].annotate(method.title(), (volatilities[i], returns[i]), 
+                                      xytext=(5, 5), textcoords='offset points')
+                axes[0, 0].set_xlabel('Volatility')
+                axes[0, 0].set_ylabel('Expected Return')
+                axes[0, 0].set_title('Risk-Return Profile')
+                axes[0, 0].grid(True, alpha=0.3)
+                
+                # Portfolio weights comparison
+                x = np.arange(len(returns_df.columns))
+                width = 0.25
+                
+                for i, method in enumerate(methods):
+                    weights = optimization_results[method]['weights']
+                    axes[0, 1].bar(x + i*width, weights, width, label=method.title(), alpha=0.7)
+                
+                axes[0, 1].set_xlabel('Assets')
+                axes[0, 1].set_ylabel('Weight')
+                axes[0, 1].set_title('Portfolio Weights by Method')
+                axes[0, 1].set_xticks(x + width)
+                axes[0, 1].set_xticklabels(returns_df.columns, rotation=45)
+                axes[0, 1].legend()
+                axes[0, 1].grid(True, alpha=0.3)
+                
+                # Sharpe ratio comparison
+                sharpe_ratios = [optimization_results[m]['sharpe_ratio'] for m in methods]
+                
+                axes[1, 0].bar(methods, sharpe_ratios, color='lightgreen', alpha=0.7)
+                axes[1, 0].set_title('Sharpe Ratio by Optimization Method')
+                axes[1, 0].set_ylabel('Sharpe Ratio')
+                axes[1, 0].grid(True, alpha=0.3)
+                
+                # Backtest results for Sharpe-optimized portfolio
+                if 'sharpe' in optimization_results:
+                    sharpe_weights = optimization_results['sharpe']['weights']
+                    backtest = self.analyzer.backtest_portfolio(returns_df, sharpe_weights)
+                    
+                    axes[1, 1].plot(backtest['portfolio_values'].index, 
+                                   backtest['portfolio_values'].values, 
+                                   label='Portfolio Value', linewidth=2)
+                    axes[1, 1].set_title('Portfolio Performance (Sharpe Optimized)')
+                    axes[1, 1].set_ylabel('Portfolio Value ($)')
+                    axes[1, 1].legend()
+                    axes[1, 1].grid(True, alpha=0.3)
+                
+                plt.tight_layout()
+                
+                if save_path:
+                    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+                    logger.info(f"Portfolio optimization chart saved to {save_path}")
+                else:
+                    plt.show()
+                
+                plt.close()
+                
+                return optimization_results
             
         except Exception as e:
             logger.error(f"Error generating portfolio optimization: {e}")
@@ -332,7 +319,15 @@ class RenewableEnergyInvestmentAnalysis:
             f.write("1. INDIVIDUAL COMPANY ANALYSIS\n")
             f.write("-" * 40 + "\n\n")
             
-            analysis_results = self.analyzer.analyze_all_companies()
+            analysis_results, detailed_reports = self.analyzer.analyze_all_companies()
+            
+            # Write detailed individual company reports
+            if detailed_reports:
+                f.write("DETAILED INDIVIDUAL COMPANY ANALYSIS\n")
+                f.write("=" * 50 + "\n\n")
+                for report in detailed_reports:
+                    f.write(report)
+                    f.write("\n" + "="*80 + "\n\n")
             
             if analysis_results:
                 # Summary table
@@ -426,10 +421,10 @@ class RenewableEnergyInvestmentAnalysis:
         """Run the complete investment analysis pipeline"""
         logger.info("Starting complete renewable energy investment analysis...")
         
-        # Step 1: Setup database and load data
-        logger.info("Step 1: Setting up database and loading data...")
-        if not self.setup_database():
-            logger.error("Failed to setup database. Exiting.")
+        # Step 1: Setup database and load data using unified pipeline
+        logger.info("Step 1: Setting up database and loading data using unified pipeline...")
+        if not self.setup_database_and_data():
+            logger.error("Failed to setup database and data. Exiting.")
             return False
         
         # Step 2: Generate technical charts
@@ -460,9 +455,6 @@ class RenewableEnergyInvestmentAnalysis:
 
 def main():
     """Main function"""
-    print("Renewable Energy Investment Analysis System")
-    print("="*50)
-    
     # Initialize analysis system
     analysis_system = RenewableEnergyInvestmentAnalysis()
     
@@ -471,7 +463,10 @@ def main():
     
     if success:
         print("\nAnalysis completed successfully!")
-        print("Check the 'reports/' and 'charts/' directories for results.")
+        print("Check the following directories for results:")
+        print("• 'reports/' - Analysis reports")
+        print("• 'charts/' - Technical analysis charts")
+        print("• 'powerbi/data/' - CSV files for PowerBI dashboard")
     else:
         print("\nAnalysis failed. Please check the logs for details.")
 

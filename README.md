@@ -51,24 +51,25 @@ This project analyzes the following top renewable energy companies:
 
 ```
 energy_investment_project/
-├── config.py                 # Configuration settings
-├── database.py              # Database connection and operations
-├── enhanced_fetch_data.py   # Enhanced data fetching with database integration
-├── investment_analysis.py   # Core investment analysis engine
-├── main.py                  # Main analysis orchestration script
-├── powerbi_export.py        # PowerBI data export utilities
-├── requirements.txt         # Python dependencies
-├── README.md               # This file
+├── config.py                    # Configuration settings
+├── database.py                 # Database connection and operations
+├── enhanced_fetch_data.py      # Enhanced data fetching with database integration
+├── investment_analysis.py      # Core investment analysis engine
+├── main.py                     # Unified analysis orchestration script (NEW)
+├── powerbi_export.py           # Legacy PowerBI data export utilities
+├── test_unified_analysis.py    # Test script for unified system (NEW)
+├── requirements.txt            # Python dependencies
+├── README.md                  # This file
 ├── sql/
-│   └── create_tables.sql   # Database schema
+│   └── create_tables.sql      # Database schema
 ├── data/
-│   └── raw/                # Raw data storage
-├── analysis/               # Analysis outputs
-├── reports/                # Generated reports
-├── charts/                 # Generated charts
+│   └── raw/                   # Raw data storage
+├── analysis/                  # Analysis outputs
+├── reports/                   # Generated reports
+├── charts/                    # Generated charts
 └── powerbi/
-    ├── data/               # PowerBI data exports
-    └── dashboard.pbix      # PowerBI dashboard file
+    ├── data/                  # PowerBI data exports (CSV files)
+    └── dashboard.pbix         # PowerBI dashboard file
 ```
 
 ## 🚀 Quick Start
@@ -76,7 +77,7 @@ energy_investment_project/
 ### Prerequisites
 
 1. **Python 3.8+** installed
-2. **PostgreSQL** database server
+2. **PostgreSQL** database server (optional - system works without it)
 3. **PowerBI Desktop** (for dashboard creation)
 
 ### Installation
@@ -92,9 +93,10 @@ energy_investment_project/
    pip install -r requirements.txt
    ```
 
-3. **Configure the database**:
+3. **Configure the database** (optional):
    - Update `config.py` with your PostgreSQL credentials
    - Ensure PostgreSQL is running
+   - System will work without database using direct data collection
 
 4. **Set up API keys** (optional):
    - Get a free Finnhub API key from [finnhub.io](https://finnhub.io/)
@@ -102,20 +104,40 @@ energy_investment_project/
 
 ### Running the Analysis
 
-1. **Run the complete analysis**:
+**NEW: Unified Data Collection System**
+
+The system now uses a unified approach where `enhanced_fetch_data.py` collects all data once and exports to both CSV (for PowerBI) and database (for main analysis).
+
+1. **Run the complete analysis** (recommended):
    ```bash
    python main.py
    ```
+   This will:
+   - Call `enhanced_fetch_data.py` to collect all data once
+   - Export CSV files for PowerBI
+   - Load data to database for main analysis
+   - Generate analysis reports and charts
 
-2. **Export data for PowerBI**:
+2. **Run data collection only**:
    ```bash
-   python powerbi_export.py
+   python enhanced_fetch_data.py
+   ```
+   This will:
+   - Collect all data once from Yahoo Finance
+   - Export CSV files for PowerBI
+   - Load data to database
+
+3. **Test the unified system**:
+   ```bash
+   python test_unified_analysis.py
    ```
 
-3. **View results**:
+4. **View results**:
    - Check `reports/` for detailed analysis reports
    - Check `charts/` for technical analysis charts
    - Check `powerbi/data/` for PowerBI-ready data files
+
+**Note**: The old `powerbi_export.py` script is still available but the unified `enhanced_fetch_data.py` is now more efficient.
 
 ## 📈 Analysis Workflow
 

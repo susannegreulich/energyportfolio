@@ -14,7 +14,7 @@ import os
 from config import *
 
 # Set up logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
 
 class DatabaseManager:
