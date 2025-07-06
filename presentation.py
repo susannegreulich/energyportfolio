@@ -19,7 +19,7 @@ from investment_analysis import InvestmentAnalyzer
 from portfolio_optimization import PortfolioOptimizer
 
 # Set up logging
-logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 class PresentationManager:
@@ -27,13 +27,20 @@ class PresentationManager:
     
     def __init__(self):
         """Initialize the presentation manager"""
-        self.db_manager = DatabaseManager()
-        self.analyzer = InvestmentAnalyzer()
-        self.optimizer = PortfolioOptimizer()
-        
-        # Create directories
-        os.makedirs('reports', exist_ok=True)
-        os.makedirs('charts', exist_ok=True)
+        try:
+            self.db_manager = DatabaseManager()
+            self.analyzer = InvestmentAnalyzer()
+            self.optimizer = PortfolioOptimizer()
+            
+            # Create directories
+            os.makedirs('reports', exist_ok=True)
+            os.makedirs('charts', exist_ok=True)
+            
+            logger.info("PresentationManager initialized successfully")
+        except Exception as e:
+            logger.error(f"Error initializing PresentationManager: {e}")
+            print(f"ERROR: Failed to initialize PresentationManager: {e}")
+            raise
     
     # ==================== REPORT GENERATION METHODS ====================
     
@@ -41,118 +48,136 @@ class PresentationManager:
         """Generate comprehensive investment analysis report"""
         logger.info("Generating comprehensive analysis report...")
         
-        # Create report file
-        report_path = f"reports/renewable_energy_analysis_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
-        
-        with open(report_path, 'w') as f:
-            f.write("="*80 + "\n")
-            f.write("RENEWABLE ENERGY INVESTMENT ANALYSIS REPORT\n")
-            f.write("="*80 + "\n")
-            f.write(f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-            f.write(f"Analysis Period: {DATA_START_DATE} to {DATA_END_DATE}\n")
-            f.write("="*80 + "\n\n")
+        try:
+            # Create report file
+            report_path = f"reports/renewable_energy_analysis_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
             
-            # Company analysis
-            f.write("1. INDIVIDUAL COMPANY ANALYSIS\n")
-            f.write("-" * 40 + "\n\n")
-            
-            analysis_results, detailed_reports = self.analyzer.analyze_all_companies()
-            
-            # Write detailed individual company reports
-            if detailed_reports:
-                f.write("DETAILED INDIVIDUAL COMPANY ANALYSIS\n")
-                f.write("=" * 50 + "\n\n")
-                for report in detailed_reports:
-                    f.write(report)
-                    f.write("\n" + "="*80 + "\n\n")
-            
-            if analysis_results:
-                # Summary table
-                f.write("Investment Recommendations Summary:\n")
-                f.write("-" * 50 + "\n")
-                f.write(f"{'Ticker':<12} {'Score':<8} {'Recommendation':<15} {'Sharpe':<8} {'Volatility':<12}\n")
-                f.write("-" * 50 + "\n")
-                
-                for result in analysis_results:
-                    ticker = result['ticker']
-                    score = result['score']
-                    recommendation = result['recommendation']
-                    sharpe = result['risk_metrics']['Sharpe_Ratio']
-                    volatility = result['risk_metrics']['Volatility']
-                    
-                    f.write(f"{ticker:<12} {score:<8.1f} {recommendation:<15} {sharpe:<8.3f} {volatility:<12.3f}\n")
-                
-                f.write("\n" + "="*80 + "\n")
-                f.write("2. PORTFOLIO OPTIMIZATION RESULTS\n")
+            with open(report_path, 'w') as f:
+                f.write("="*80 + "\n")
+                f.write("RENEWABLE ENERGY INVESTMENT ANALYSIS REPORT\n")
+                f.write("="*80 + "\n")
+                f.write(f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write(f"Analysis Period: {DATA_START_DATE} to {DATA_END_DATE}\n")
                 f.write("="*80 + "\n\n")
                 
-                # Portfolio optimization
-                optimization_results = self.optimizer.generate_portfolio_optimization()
+                # Company analysis
+                f.write("1. INDIVIDUAL COMPANY ANALYSIS\n")
+                f.write("-" * 40 + "\n\n")
                 
-                if optimization_results:
-                    f.write("Portfolio Optimization Results:\n")
-                    f.write("-" * 40 + "\n")
+                try:
+                    analysis_results, detailed_reports = self.analyzer.analyze_all_companies()
+                except Exception as e:
+                    logger.error(f"Error during company analysis: {e}")
+                    print(f"ERROR: Failed to analyze companies: {e}")
+                    f.write(f"ERROR: Company analysis failed - {e}\n\n")
+                    analysis_results, detailed_reports = [], []
+                
+                # Write detailed individual company reports
+                if detailed_reports:
+                    f.write("DETAILED INDIVIDUAL COMPANY ANALYSIS\n")
+                    f.write("=" * 50 + "\n\n")
+                    for report in detailed_reports:
+                        f.write(report)
+                        f.write("\n" + "="*80 + "\n\n")
+                
+                if analysis_results:
+                    # Summary table
+                    f.write("Investment Recommendations Summary:\n")
+                    f.write("-" * 50 + "\n")
+                    f.write(f"{'Ticker':<12} {'Score':<8} {'Recommendation':<15} {'Sharpe':<8} {'Volatility':<12}\n")
+                    f.write("-" * 50 + "\n")
                     
-                    for method, result in optimization_results.items():
-                        f.write(f"\n{method.upper()} OPTIMIZATION:\n")
-                        f.write(f"  Expected Return: {result['expected_return']:.4f} ({result['expected_return']*100:.2f}%)\n")
-                        f.write(f"  Volatility: {result['volatility']:.4f} ({result['volatility']*100:.2f}%)\n")
-                        f.write(f"  Sharpe Ratio: {result['sharpe_ratio']:.4f}\n")
-                        f.write("  Portfolio Weights:\n")
+                    for result in analysis_results:
+                        ticker = result['ticker']
+                        score = result['score']
+                        recommendation = result['recommendation']
+                        sharpe = result['risk_metrics']['Sharpe_Ratio']
+                        volatility = result['risk_metrics']['Volatility']
                         
-                        for i, ticker in enumerate(self.analyzer.companies.values()):
-                            if i < len(result['weights']):
-                                weight = result['weights'][i]
-                                f.write(f"    {ticker}: {weight:.4f} ({weight*100:.2f}%)\n")
-                
-                f.write("\n" + "="*80 + "\n")
-                f.write("3. RISK ANALYSIS SUMMARY\n")
-                f.write("="*80 + "\n\n")
-                
-                # Risk analysis summary
-                f.write("Key Risk Metrics:\n")
-                f.write("-" * 30 + "\n")
-                
-                for result in analysis_results:
-                    ticker = result['ticker']
-                    risk_metrics = result['risk_metrics']
+                        f.write(f"{ticker:<12} {score:<8.1f} {recommendation:<15} {sharpe:<8.3f} {volatility:<12.3f}\n")
                     
-                    f.write(f"\n{ticker}:\n")
-                    f.write(f"  Volatility: {risk_metrics['Volatility']:.4f}\n")
-                    f.write(f"  Sharpe Ratio: {risk_metrics['Sharpe_Ratio']:.4f}\n")
-                    f.write(f"  Max Drawdown: {risk_metrics['Max_Drawdown']:.4f}\n")
-                    f.write(f"  VaR (95%): {risk_metrics['VaR_95']:.4f}\n")
-                
-                f.write("\n" + "="*80 + "\n")
-                f.write("4. INVESTMENT RECOMMENDATIONS\n")
-                f.write("="*80 + "\n\n")
-                
-                # Top recommendations
-                top_picks = [r for r in analysis_results if r['score'] >= 2]
-                if top_picks:
-                    f.write("TOP RECOMMENDATIONS:\n")
-                    f.write("-" * 25 + "\n")
-                    for result in top_picks:
-                        f.write(f"• {result['ticker']}: {result['recommendation']}\n")
-                        f.write(f"  Score: {result['score']}, Reasons: {', '.join(result['reasons'])}\n\n")
-                else:
-                    f.write("No strong buy recommendations at this time.\n\n")
-                
-                # Risk warnings
-                f.write("RISK WARNINGS:\n")
-                f.write("-" * 15 + "\n")
-                f.write("• Past performance does not guarantee future results\n")
-                f.write("• Renewable energy sector is subject to regulatory changes\n")
-                f.write("• Currency fluctuations may affect international stocks\n")
-                f.write("• Consider diversification across different renewable energy subsectors\n")
-                f.write("• Monitor policy changes and government incentives\n\n")
-                
-                f.write("="*80 + "\n")
-                f.write("END OF REPORT\n")
-                f.write("="*80 + "\n")
-        
-        logger.info(f"Comprehensive report saved to {report_path}")
-        return report_path
+                    f.write("\n" + "="*80 + "\n")
+                    f.write("2. PORTFOLIO OPTIMIZATION RESULTS\n")
+                    f.write("="*80 + "\n\n")
+                    
+                    # Portfolio optimization
+                    try:
+                        optimization_results = self.optimizer.generate_portfolio_optimization()
+                    except Exception as e:
+                        logger.error(f"Error during portfolio optimization: {e}")
+                        print(f"ERROR: Failed to generate portfolio optimization: {e}")
+                        f.write(f"ERROR: Portfolio optimization failed - {e}\n\n")
+                        optimization_results = {}
+                    
+                    if optimization_results:
+                        f.write("Portfolio Optimization Results:\n")
+                        f.write("-" * 40 + "\n")
+                        
+                        for method, result in optimization_results.items():
+                            f.write(f"\n{method.upper()} OPTIMIZATION:\n")
+                            f.write(f"  Expected Return: {result['expected_return']:.4f} ({result['expected_return']*100:.2f}%)\n")
+                            f.write(f"  Volatility: {result['volatility']:.4f} ({result['volatility']*100:.2f}%)\n")
+                            f.write(f"  Sharpe Ratio: {result['sharpe_ratio']:.4f}\n")
+                            f.write("  Portfolio Weights:\n")
+                            
+                            for i, ticker in enumerate(self.analyzer.companies.values()):
+                                if i < len(result['weights']):
+                                    weight = result['weights'][i]
+                                    f.write(f"    {ticker}: {weight:.4f} ({weight*100:.2f}%)\n")
+                    
+                    f.write("\n" + "="*80 + "\n")
+                    f.write("3. RISK ANALYSIS SUMMARY\n")
+                    f.write("="*80 + "\n\n")
+                    
+                    # Risk analysis summary
+                    f.write("Key Risk Metrics:\n")
+                    f.write("-" * 30 + "\n")
+                    
+                    for result in analysis_results:
+                        ticker = result['ticker']
+                        risk_metrics = result['risk_metrics']
+                        
+                        f.write(f"\n{ticker}:\n")
+                        f.write(f"  Volatility: {risk_metrics['Volatility']:.4f}\n")
+                        f.write(f"  Sharpe Ratio: {risk_metrics['Sharpe_Ratio']:.4f}\n")
+                        f.write(f"  Max Drawdown: {risk_metrics['Max_Drawdown']:.4f}\n")
+                        f.write(f"  VaR (95%): {risk_metrics['VaR_95']:.4f}\n")
+                    
+                    f.write("\n" + "="*80 + "\n")
+                    f.write("4. INVESTMENT RECOMMENDATIONS\n")
+                    f.write("="*80 + "\n\n")
+                    
+                    # Top recommendations
+                    top_picks = [r for r in analysis_results if r['score'] >= 2]
+                    if top_picks:
+                        f.write("TOP RECOMMENDATIONS:\n")
+                        f.write("-" * 25 + "\n")
+                        for result in top_picks:
+                            f.write(f"• {result['ticker']}: {result['recommendation']}\n")
+                            f.write(f"  Score: {result['score']}, Reasons: {', '.join(result['reasons'])}\n\n")
+                    else:
+                        f.write("No strong buy recommendations at this time.\n\n")
+                    
+                    # Risk warnings
+                    f.write("RISK WARNINGS:\n")
+                    f.write("-" * 15 + "\n")
+                    f.write("• Past performance does not guarantee future results\n")
+                    f.write("• Renewable energy sector is subject to regulatory changes\n")
+                    f.write("• Currency fluctuations may affect international stocks\n")
+                    f.write("• Consider diversification across different renewable energy subsectors\n")
+                    f.write("• Monitor policy changes and government incentives\n\n")
+                    
+                    f.write("="*80 + "\n")
+                    f.write("END OF REPORT\n")
+                    f.write("="*80 + "\n")
+            
+            logger.info(f"Comprehensive report saved to {report_path}")
+            return report_path
+            
+        except Exception as e:
+            logger.error(f"Error generating comprehensive report: {e}")
+            print(f"ERROR: Failed to generate comprehensive report: {e}")
+            raise
     
     # ==================== VISUALIZATION METHODS ====================
     
@@ -221,8 +246,12 @@ class PresentationManager:
             plt.tight_layout()
             
             if save_path:
-                plt.savefig(save_path, dpi=300, bbox_inches='tight')
-                logger.info(f"Risk analysis chart saved to {save_path}")
+                try:
+                    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+                    logger.info(f"Risk analysis chart saved to {save_path}")
+                except Exception as e:
+                    logger.error(f"Error saving risk analysis chart to {save_path}: {e}")
+                    print(f"ERROR: Failed to save risk analysis chart to {save_path}: {e}")
             else:
                 plt.show()
             
@@ -230,8 +259,13 @@ class PresentationManager:
             
         except Exception as e:
             logger.error(f"Error generating risk analysis charts: {e}")
+            print(f"ERROR: Failed to generate risk analysis charts: {e}")
         finally:
-            self.db_manager.disconnect()
+            try:
+                self.db_manager.disconnect()
+            except Exception as e:
+                logger.error(f"Error disconnecting from database: {e}")
+                print(f"WARNING: Error disconnecting from database: {e}")
     
     def generate_technical_charts(self, ticker, save_path=None):
         """Generate technical analysis charts for a single company"""
@@ -283,8 +317,12 @@ class PresentationManager:
             plt.tight_layout()
             
             if save_path:
-                plt.savefig(save_path, dpi=300, bbox_inches='tight')
-                logger.info(f"Technical chart saved to {save_path}")
+                try:
+                    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+                    logger.info(f"Technical chart saved to {save_path}")
+                except Exception as e:
+                    logger.error(f"Error saving technical chart to {save_path}: {e}")
+                    print(f"ERROR: Failed to save technical chart to {save_path}: {e}")
             else:
                 plt.show()
             
@@ -292,17 +330,27 @@ class PresentationManager:
             
         except Exception as e:
             logger.error(f"Error generating technical charts for {ticker}: {e}")
+            print(f"ERROR: Failed to generate technical charts for {ticker}: {e}")
         finally:
-            self.db_manager.disconnect()
+            try:
+                self.db_manager.disconnect()
+            except Exception as e:
+                logger.error(f"Error disconnecting from database: {e}")
+                print(f"WARNING: Error disconnecting from database: {e}")
     
     def generate_all_technical_charts(self):
         """Generate technical charts for all companies"""
         logger.info("Generating technical analysis charts for all companies...")
         
         for name, ticker in self.analyzer.companies.items():
-            logger.info(f"Generating technical chart for {ticker}...")
-            chart_path = f"charts/technical_{ticker.replace('.', '_')}.png"
-            self.generate_technical_charts(ticker, chart_path)
+            try:
+                logger.info(f"Generating technical chart for {ticker}...")
+                chart_path = f"charts/technical_{ticker.replace('.', '_')}.png"
+                self.generate_technical_charts(ticker, chart_path)
+            except Exception as e:
+                logger.error(f"Error generating technical chart for {ticker}: {e}")
+                print(f"ERROR: Failed to generate technical chart for {ticker}: {e}")
+                continue
     
     def generate_comprehensive_dashboard(self, save_path=None):
         """Generate a comprehensive dashboard with both risk and technical analysis"""
@@ -387,8 +435,12 @@ class PresentationManager:
             fig.suptitle('Renewable Energy Investment Analysis Dashboard', fontsize=16, y=0.98)
             
             if save_path:
-                plt.savefig(save_path, dpi=300, bbox_inches='tight')
-                logger.info(f"Comprehensive dashboard saved to {save_path}")
+                try:
+                    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+                    logger.info(f"Comprehensive dashboard saved to {save_path}")
+                except Exception as e:
+                    logger.error(f"Error saving comprehensive dashboard to {save_path}: {e}")
+                    print(f"ERROR: Failed to save comprehensive dashboard to {save_path}: {e}")
             else:
                 plt.show()
             
@@ -396,23 +448,40 @@ class PresentationManager:
             
         except Exception as e:
             logger.error(f"Error generating comprehensive dashboard: {e}")
+            print(f"ERROR: Failed to generate comprehensive dashboard: {e}")
         finally:
-            self.db_manager.disconnect()
+            try:
+                self.db_manager.disconnect()
+            except Exception as e:
+                logger.error(f"Error disconnecting from database: {e}")
+                print(f"WARNING: Error disconnecting from database: {e}")
     
     def generate_all_charts(self):
         """Generate all types of charts"""
         logger.info("Starting comprehensive chart generation...")
         
-        # Generate risk analysis charts
-        risk_chart_path = "charts/risk_analysis.png"
-        self.generate_risk_analysis_charts(risk_chart_path)
+        try:
+            # Generate risk analysis charts
+            risk_chart_path = "charts/risk_analysis.png"
+            self.generate_risk_analysis_charts(risk_chart_path)
+        except Exception as e:
+            logger.error(f"Error generating risk analysis charts: {e}")
+            print(f"ERROR: Failed to generate risk analysis charts: {e}")
         
-        # Generate technical charts for all companies
-        self.generate_all_technical_charts()
+        try:
+            # Generate technical charts for all companies
+            self.generate_all_technical_charts()
+        except Exception as e:
+            logger.error(f"Error generating technical charts: {e}")
+            print(f"ERROR: Failed to generate technical charts: {e}")
         
-        # Generate comprehensive dashboard
-        dashboard_path = "charts/comprehensive_dashboard.png"
-        self.generate_comprehensive_dashboard(dashboard_path)
+        try:
+            # Generate comprehensive dashboard
+            dashboard_path = "charts/comprehensive_dashboard.png"
+            self.generate_comprehensive_dashboard(dashboard_path)
+        except Exception as e:
+            logger.error(f"Error generating comprehensive dashboard: {e}")
+            print(f"ERROR: Failed to generate comprehensive dashboard: {e}")
         
         logger.info("All charts generation completed!")
     
@@ -422,15 +491,29 @@ class PresentationManager:
         """Generate both comprehensive report and all charts"""
         logger.info("Starting comprehensive presentation generation...")
         
-        # Generate comprehensive report
-        report_path = self.generate_comprehensive_report()
+        try:
+            # Generate comprehensive report
+            report_path = self.generate_comprehensive_report()
+        except Exception as e:
+            logger.error(f"Error generating comprehensive report: {e}")
+            print(f"ERROR: Failed to generate comprehensive report: {e}")
+            report_path = None
         
-        # Generate all charts
-        self.generate_all_charts()
+        try:
+            # Generate all charts
+            self.generate_all_charts()
+        except Exception as e:
+            logger.error(f"Error generating charts: {e}")
+            print(f"ERROR: Failed to generate charts: {e}")
         
         logger.info("Comprehensive presentation generation completed!")
         print("Comprehensive presentation generation completed!")
-        print(f"Report saved to: {report_path}")
+        
+        if report_path:
+            print(f"Report saved to: {report_path}")
+        else:
+            print("WARNING: Report generation failed")
+            
         print("Charts saved to: charts/")
         print("Generated files:")
         print("- charts/risk_analysis.png")
@@ -441,15 +524,24 @@ class PresentationManager:
 
 def main():
     """Main function for comprehensive presentation generation"""
-    logger.info("Starting comprehensive presentation generation...")
-    
-    # Initialize presentation manager
-    presentation_manager = PresentationManager()
-    
-    # Generate comprehensive presentation
-    presentation_manager.generate_comprehensive_presentation()
-    
-    logger.info("Comprehensive presentation generation completed!")
+    try:
+        logger.info("Starting comprehensive presentation generation...")
+        print("Starting comprehensive presentation generation...")
+        
+        # Initialize presentation manager
+        presentation_manager = PresentationManager()
+        
+        # Generate comprehensive presentation
+        presentation_manager.generate_comprehensive_presentation()
+        
+        logger.info("Comprehensive presentation generation completed!")
+        print("Comprehensive presentation generation completed successfully!")
+        
+    except Exception as e:
+        logger.error(f"Critical error in main function: {e}")
+        print(f"CRITICAL ERROR: {e}")
+        print("Please check the logs for more details.")
+        raise
 
 if __name__ == "__main__":
     main() 
