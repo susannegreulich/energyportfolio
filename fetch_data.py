@@ -3,71 +3,189 @@ Enhanced Data Fetching Module for Renewable Energy Investment Analysis
 Unified data collection with export to both CSV (PowerBI) and database (main analysis)
 """
 
-import yfinance as yf
-import pandas as pd
-import numpy as np
-import requests
-import time
+import sys
+import traceback
 from datetime import datetime, timedelta
 import os
-import logging
-from textblob import TextBlob
+import time
 import warnings
 warnings.filterwarnings('ignore')
 
-from config import *
-from database import DatabaseManager, create_database
-from investment_analysis import InvestmentAnalyzer
+# Import validation with clear error messages
+try:
+    import yfinance as yf
+except ImportError as e:
+    print("❌ ERROR: Required package 'yfinance' not found!")
+    print(f"   Details: {e}")
+    print("   Solution: Run 'pip install yfinance'")
+    sys.exit(1)
 
-# Set up logging
-logging.basicConfig(level=logging.WARNING)
+try:
+    import pandas as pd
+except ImportError as e:
+    print("❌ ERROR: Required package 'pandas' not found!")
+    print(f"   Details: {e}")
+    print("   Solution: Run 'pip install pandas'")
+    sys.exit(1)
+
+try:
+    import numpy as np
+except ImportError as e:
+    print("❌ ERROR: Required package 'numpy' not found!")
+    print(f"   Details: {e}")
+    print("   Solution: Run 'pip install numpy'")
+    sys.exit(1)
+
+try:
+    import requests
+except ImportError as e:
+    print("❌ ERROR: Required package 'requests' not found!")
+    print(f"   Details: {e}")
+    print("   Solution: Run 'pip install requests'")
+    sys.exit(1)
+
+try:
+    from textblob import TextBlob
+except ImportError as e:
+    print("⚠️  WARNING: Package 'textblob' not found. News sentiment analysis will be skipped.")
+    print(f"   Details: {e}")
+    print("   Solution: Run 'pip install textblob'")
+    TextBlob = None
+
+# Import local modules with error handling
+try:
+    from config import *
+except ImportError as e:
+    print("❌ ERROR: Configuration file 'config.py' not found or invalid!")
+    print(f"   Details: {e}")
+    print("   Solution: Ensure config.py exists and contains required variables")
+    sys.exit(1)
+
+try:
+    from database import DatabaseManager, create_database
+except ImportError as e:
+    print("❌ ERROR: Database module 'database.py' not found or invalid!")
+    print(f"   Details: {e}")
+    print("   Solution: Ensure database.py exists and is properly formatted")
+    sys.exit(1)
+
+try:
+    from investment_analysis import InvestmentAnalyzer
+except ImportError as e:
+    print("❌ ERROR: Investment analysis module 'investment_analysis.py' not found or invalid!")
+    print(f"   Details: {e}")
+    print("   Solution: Ensure investment_analysis.py exists and is properly formatted")
+    sys.exit(1)
+
+import logging
+
+# Set up logging to show INFO messages in console
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler('logs/fetch_data.log')
+    ]
+)
 logger = logging.getLogger(__name__)
+
+def validate_configuration():
+    """Validate that all required configuration variables are present"""
+    print("🔍 Validating configuration...")
+    
+    required_vars = [
+        'FINNHUB_API_KEY', 'FINNHUB_BASE_URL', 'DATA_START_DATE', 
+        'DATA_END_DATE', 'RISK_FREE_RATE', 'MARKET_RETURN'
+    ]
+    
+    missing_vars = []
+    for var in required_vars:
+        if not globals().get(var):
+            missing_vars.append(var)
+    
+    if missing_vars:
+        print(f"❌ ERROR: Missing required configuration variables: {', '.join(missing_vars)}")
+        print("   Solution: Check your config.py file and ensure all variables are defined")
+        return False
+    
+    # Validate date formats
+    try:
+        datetime.strptime(DATA_START_DATE, '%Y-%m-%d')
+        datetime.strptime(DATA_END_DATE, '%Y-%m-%d')
+    except ValueError as e:
+        print(f"❌ ERROR: Invalid date format in configuration: {e}")
+        print("   Solution: Ensure dates are in YYYY-MM-DD format")
+        return False
+    
+    print("✅ Configuration validation passed")
+    return True
 
 class EnhancedDataFetcher:
     """Enhanced data fetcher with unified collection and export"""
     
     def __init__(self):
         """Initialize the data fetcher"""
-        self.db_manager = DatabaseManager()
-        self.analyzer = InvestmentAnalyzer()
+        print("🚀 Initializing Enhanced Data Fetcher...")
         
-        # Create output directories
-        os.makedirs('powerbi/data', exist_ok=True)
-        os.makedirs('analysis', exist_ok=True)
-        os.makedirs('reports', exist_ok=True)
-        os.makedirs('charts', exist_ok=True)
-        
-        # Filter out delisted companies (same as powerbi_export.py)
-        companies_dict = {
-            'Orsted': 'ORSTED.CO',
-            'Vestas': 'VWS.CO',
-            'NextEra Energy': 'NEE',
-            'Iberdrola': 'IBE.MC',
-            'Enel': 'ENEL.MI',
-            'Brookfield Renewable': 'BEP',
-            'EDP Renovaveis': 'EDPR.LS',
-            'Plug Power': 'PLUG',
-            'First Solar': 'FSLR'
-        }
-        self.companies = {}
-        for name, ticker in companies_dict.items():
-            if ticker != 'SGRE.MC':  # Remove delisted company
-                self.companies[name] = ticker
-        
-        # Store collected data for reuse
-        self.collected_data = {}
-        self.company_summaries = {}
-        self.stock_prices = {}
-        self.risk_metrics = {}
+        try:
+            self.db_manager = DatabaseManager()
+            self.analyzer = InvestmentAnalyzer()
+            
+            # Create output directories
+            directories = ['powerbi/data', 'analysis', 'reports', 'charts', 'logs']
+            for directory in directories:
+                try:
+                    os.makedirs(directory, exist_ok=True)
+                    print(f"✅ Created directory: {directory}")
+                except Exception as e:
+                    print(f"⚠️  Warning: Could not create directory {directory}: {e}")
+            
+            # Filter out delisted companies (same as powerbi_export.py)
+            companies_dict = {
+                'Orsted': 'ORSTED.CO',
+                'Vestas': 'VWS.CO',
+                'NextEra Energy': 'NEE',
+                'Iberdrola': 'IBE.MC',
+                'Enel': 'ENEL.MI',
+                'Brookfield Renewable': 'BEP',
+                'EDP Renovaveis': 'EDPR.LS',
+                'Plug Power': 'PLUG',
+                'First Solar': 'FSLR'
+            }
+            self.companies = {}
+            for name, ticker in companies_dict.items():
+                if ticker != 'SGRE.MC':  # Remove delisted company
+                    self.companies[name] = ticker
+            
+            print(f"✅ Loaded {len(self.companies)} companies for analysis")
+            
+            # Store collected data for reuse
+            self.collected_data = {}
+            self.company_summaries = {}
+            self.stock_prices = {}
+            self.risk_metrics = {}
+            
+            print("✅ Enhanced Data Fetcher initialized successfully")
+            
+        except Exception as e:
+            print(f"❌ ERROR: Failed to initialize Enhanced Data Fetcher: {e}")
+            print(f"   Stack trace: {traceback.format_exc()}")
+            raise
         
     def fetch_stock_data(self, ticker, start_date=None, end_date=None):
         """Fetch comprehensive stock data"""
         try:
+            print(f"📊 Fetching data for {ticker}...")
             stock = yf.Ticker(ticker)
             
             # Fetch historical data
             hist = stock.history(start=start_date or DATA_START_DATE, 
                                end=end_date or DATA_END_DATE)
+            
+            if hist.empty:
+                print(f"⚠️  Warning: No historical data found for {ticker}")
+                return None
             
             # Fetch additional info
             info = stock.info
@@ -77,11 +195,14 @@ class EnhancedDataFetcher:
                 income_stmt = stock.income_stmt
                 balance_sheet = stock.balance_sheet
                 cash_flow = stock.cashflow
-            except:
+                print(f"✅ Financial statements fetched for {ticker}")
+            except Exception as e:
+                print(f"⚠️  Warning: Could not fetch financial statements for {ticker}: {e}")
                 income_stmt = None
                 balance_sheet = None
                 cash_flow = None
             
+            print(f"✅ Successfully fetched data for {ticker}")
             return {
                 'history': hist,
                 'info': info,
@@ -90,12 +211,13 @@ class EnhancedDataFetcher:
                 'cash_flow': cash_flow
             }
         except Exception as e:
+            print(f"❌ ERROR: Failed to fetch data for {ticker}: {e}")
             logger.error(f"Error fetching data for {ticker}: {e}")
             return None
     
     def calculate_financial_metrics(self, stock_data):
         """Calculate comprehensive financial metrics"""
-        if not stock_data or not stock_data['income_stmt'] is not None:
+        if not stock_data or stock_data['income_stmt'] is None:
             return {}
         
         try:
@@ -172,21 +294,29 @@ class EnhancedDataFetcher:
                             metrics['Profit_Margin_Calculated'] = net_income / revenue
                     
                 except Exception as e:
+                    print(f"⚠️  Warning: Error calculating financial metrics: {e}")
                     logger.warning(f"Error calculating financial metrics: {e}")
             
             return metrics
             
         except Exception as e:
+            print(f"❌ ERROR: Failed to calculate financial metrics: {e}")
             logger.error(f"Error calculating financial metrics: {e}")
             return {}
     
     def fetch_news_sentiment(self, ticker, days_back=30):
         """Fetch news and calculate sentiment scores"""
         if FINNHUB_API_KEY == 'your_finnhub_api_key_here':
+            print("⚠️  Warning: Finnhub API key not configured. Skipping news sentiment analysis.")
             logger.warning("Finnhub API key not configured. Skipping news sentiment analysis.")
             return []
         
+        if TextBlob is None:
+            print("⚠️  Warning: TextBlob not available. Skipping news sentiment analysis.")
+            return []
+        
         try:
+            print(f"📰 Fetching news for {ticker}...")
             # Fetch news from Finnhub
             end_date = datetime.now()
             start_date = end_date - timedelta(days=days_back)
@@ -217,24 +347,29 @@ class EnhancedDataFetcher:
                     article['relevance_score'] = 0.8  # Placeholder relevance score
                     articles_with_sentiment.append(article)
                 
+                print(f"✅ Fetched {len(articles_with_sentiment)} news articles for {ticker}")
                 return articles_with_sentiment
             else:
+                print(f"❌ ERROR: Failed to fetch news for {ticker}: HTTP {response.status_code}")
                 logger.error(f"Failed to fetch news for {ticker}: {response.status_code}")
                 return []
                 
         except Exception as e:
+            print(f"❌ ERROR: Failed to fetch news for {ticker}: {e}")
             logger.error(f"Error fetching news for {ticker}: {e}")
             return []
     
     def collect_all_data(self):
         """Collect all data once for both PowerBI export and database storage"""
-        logger.info("Starting unified data collection for PowerBI export and database storage...")
+        print("\n📈 Starting unified data collection...")
         
         try:
             # Step 1: Collect stock data and company information
-            logger.info("Step 1: Collecting stock data and company information...")
+            print("Step 1: Collecting stock data and company information...")
+            successful_companies = 0
+            
             for name, ticker in self.companies.items():
-                logger.info(f"Collecting data for {name} ({ticker})...")
+                print(f"\n📊 Processing {name} ({ticker})...")
                 
                 try:
                     # Fetch comprehensive data
@@ -273,41 +408,56 @@ class EnhancedDataFetcher:
                         # Calculate risk metrics
                         returns = stock_data['history']['Close'].pct_change().dropna()
                         if len(returns) > 30:  # Need sufficient data
-                            risk_metrics = self.analyzer.risk_analysis(returns)
-                            self.risk_metrics[ticker] = risk_metrics
-                            
-                            # Update company summary with risk metrics
-                            self.company_summaries[ticker]['volatility'] = risk_metrics['Volatility']
-                            self.company_summaries[ticker]['sharpe_ratio'] = risk_metrics['Sharpe_Ratio']
+                            try:
+                                risk_metrics = self.analyzer.risk_analysis(returns)
+                                self.risk_metrics[ticker] = risk_metrics
+                                
+                                # Update company summary with risk metrics
+                                self.company_summaries[ticker]['volatility'] = risk_metrics['Volatility']
+                                self.company_summaries[ticker]['sharpe_ratio'] = risk_metrics['Sharpe_Ratio']
+                                print(f"✅ Risk metrics calculated for {ticker}")
+                            except Exception as e:
+                                print(f"⚠️  Warning: Could not calculate risk metrics for {ticker}: {e}")
                         
-                        logger.info(f"Successfully collected data for {ticker}")
+                        successful_companies += 1
+                        print(f"✅ Successfully collected data for {ticker}")
                         
                     else:
-                        logger.warning(f"No valid data found for {ticker}")
+                        print(f"⚠️  Warning: No valid data found for {ticker}")
                         
                 except Exception as e:
+                    print(f"❌ ERROR: Failed to collect data for {ticker}: {e}")
                     logger.error(f"Error collecting data for {ticker}: {e}")
                     continue
                 
                 # Add delay to avoid rate limiting
                 time.sleep(0.5)
             
-            logger.info(f"Data collection completed. Collected data for {len(self.stock_prices)} companies.")
+            print(f"\n✅ Data collection completed. Successfully processed {successful_companies}/{len(self.companies)} companies.")
+            
+            if successful_companies == 0:
+                print("❌ ERROR: No companies were successfully processed!")
+                return False
+                
             return True
             
         except Exception as e:
+            print(f"❌ ERROR: Failed during data collection: {e}")
+            print(f"   Stack trace: {traceback.format_exc()}")
             logger.error(f"Error in unified data collection: {e}")
             return False
     
     def export_powerbi_data(self):
         """Export all data to CSV files for PowerBI"""
-        logger.info("Exporting data to PowerBI CSV files...")
+        print("\n📊 Exporting data to PowerBI CSV files...")
         
         success = True
+        exported_files = []
         
         # 1. Export company summary
         if self.company_summaries:
             try:
+                print("📋 Exporting company summary...")
                 summary_df = pd.DataFrame(list(self.company_summaries.values()))
                 
                 # Add calculated fields
@@ -321,14 +471,19 @@ class EnhancedDataFetcher:
                 
                 output_path = 'powerbi/data/company_summary.csv'
                 summary_df.to_csv(output_path, index=False)
-                logger.info(f"Company summary exported to {output_path}")
+                exported_files.append('company_summary.csv')
+                print(f"✅ Company summary exported to {output_path}")
             except Exception as e:
+                print(f"❌ ERROR: Failed to export company summary: {e}")
                 logger.error(f"Error exporting company summary: {e}")
                 success = False
+        else:
+            print("⚠️  Warning: No company summaries to export")
         
         # 2. Export stock prices
         if self.stock_prices:
             try:
+                print("📈 Exporting stock prices...")
                 all_prices = []
                 
                 for name, ticker in self.companies.items():
@@ -361,14 +516,21 @@ class EnhancedDataFetcher:
                     
                     output_path = 'powerbi/data/stock_prices.csv'
                     combined_prices.to_csv(output_path, index=False)
-                    logger.info(f"Stock prices exported to {output_path}")
+                    exported_files.append('stock_prices.csv')
+                    print(f"✅ Stock prices exported to {output_path}")
+                else:
+                    print("⚠️  Warning: No stock prices to export")
             except Exception as e:
+                print(f"❌ ERROR: Failed to export stock prices: {e}")
                 logger.error(f"Error exporting stock prices: {e}")
                 success = False
+        else:
+            print("⚠️  Warning: No stock prices to export")
         
         # 3. Export risk metrics
         if self.risk_metrics:
             try:
+                print("⚠️  Exporting risk metrics...")
                 all_risk_data = []
                 
                 for name, ticker in self.companies.items():
@@ -392,14 +554,21 @@ class EnhancedDataFetcher:
                     
                     output_path = 'powerbi/data/risk_metrics.csv'
                     risk_df.to_csv(output_path, index=False)
-                    logger.info(f"Risk metrics exported to {output_path}")
+                    exported_files.append('risk_metrics.csv')
+                    print(f"✅ Risk metrics exported to {output_path}")
+                else:
+                    print("⚠️  Warning: No risk metrics to export")
             except Exception as e:
+                print(f"❌ ERROR: Failed to export risk metrics: {e}")
                 logger.error(f"Error exporting risk metrics: {e}")
                 success = False
+        else:
+            print("⚠️  Warning: No risk metrics to export")
         
         # 4. Export portfolio analysis
         if len(self.stock_prices) >= 2:
             try:
+                print("📊 Exporting portfolio analysis...")
                 # Get returns data
                 all_returns = {}
                 for ticker, prices in self.stock_prices.items():
@@ -413,93 +582,115 @@ class EnhancedDataFetcher:
                     portfolio_data = []
                     
                     for method in ['sharpe', 'min_variance', 'max_return', 'equal_weight']:
-                        if method == 'equal_weight':
-                            # Equal weight portfolio
-                            n_assets = len(returns_df.columns)
-                            weights = np.array([1/n_assets] * n_assets)
-                            expected_returns = returns_df.mean() * 252
-                            cov_matrix = returns_df.cov() * 252
-                            portfolio_return = np.sum(expected_returns * weights)
-                            portfolio_vol = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
-                            sharpe_ratio = (portfolio_return - RISK_FREE_RATE) / portfolio_vol
+                        try:
+                            if method == 'equal_weight':
+                                # Equal weight portfolio
+                                n_assets = len(returns_df.columns)
+                                weights = np.array([1/n_assets] * n_assets)
+                                expected_returns = returns_df.mean() * 252
+                                cov_matrix = returns_df.cov() * 252
+                                portfolio_return = np.sum(expected_returns * weights)
+                                portfolio_vol = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
+                                sharpe_ratio = (portfolio_return - RISK_FREE_RATE) / portfolio_vol
+                                
+                                result = {
+                                    'weights': weights,
+                                    'expected_return': portfolio_return,
+                                    'volatility': portfolio_vol,
+                                    'sharpe_ratio': sharpe_ratio
+                                }
+                            else:
+                                result = self.analyzer.portfolio_optimization(returns_df, method)
                             
-                            result = {
-                                'weights': weights,
-                                'expected_return': portfolio_return,
-                                'volatility': portfolio_vol,
-                                'sharpe_ratio': sharpe_ratio
-                            }
-                        else:
-                            result = self.analyzer.portfolio_optimization(returns_df, method)
-                        
-                        if result:
-                            for i, ticker in enumerate(returns_df.columns):
-                                portfolio_data.append({
-                                    'Optimization_Method': method.replace('_', ' ').title(),
-                                    'Ticker': ticker,
-                                    'Weight': result['weights'][i],
-                                    'Expected_Return': result['expected_return'],
-                                    'Portfolio_Volatility': result['volatility'],
-                                    'Sharpe_Ratio': result['sharpe_ratio']
-                                })
+                            if result:
+                                for i, ticker in enumerate(returns_df.columns):
+                                    portfolio_data.append({
+                                        'Optimization_Method': method.replace('_', ' ').title(),
+                                        'Ticker': ticker,
+                                        'Weight': result['weights'][i],
+                                        'Expected_Return': result['expected_return'],
+                                        'Portfolio_Volatility': result['volatility'],
+                                        'Sharpe_Ratio': result['sharpe_ratio']
+                                    })
+                        except Exception as e:
+                            print(f"⚠️  Warning: Could not calculate {method} portfolio: {e}")
                     
                     if portfolio_data:
                         portfolio_df = pd.DataFrame(portfolio_data)
                         output_path = 'powerbi/data/portfolio_analysis.csv'
                         portfolio_df.to_csv(output_path, index=False)
-                        logger.info(f"Portfolio analysis exported to {output_path}")
+                        exported_files.append('portfolio_analysis.csv')
+                        print(f"✅ Portfolio analysis exported to {output_path}")
+                    else:
+                        print("⚠️  Warning: No portfolio analysis data to export")
+                else:
+                    print("⚠️  Warning: Insufficient returns data for portfolio analysis")
             except Exception as e:
+                print(f"❌ ERROR: Failed to export portfolio analysis: {e}")
                 logger.error(f"Error exporting portfolio analysis: {e}")
                 success = False
+        else:
+            print("⚠️  Warning: Need at least 2 companies for portfolio analysis")
         
         # 5. Export technical indicators
         if self.stock_prices:
             try:
+                print("📊 Exporting technical indicators...")
                 all_technical_data = []
                 
                 for name, ticker in self.companies.items():
                     if ticker in self.stock_prices:
-                        prices = self.stock_prices[ticker]
-                        technical = self.analyzer.technical_analysis(prices)
-                        
-                        tech_df = pd.DataFrame({
-                            'Date': prices.index,
-                            'Ticker': ticker,
-                            'Company_Name': name,
-                            'Close_Price': prices['Close'],
-                            'SMA_20': technical['SMA_20'],
-                            'SMA_50': technical['SMA_50'],
-                            'SMA_200': technical['SMA_200'],
-                            'RSI': technical['RSI'],
-                            'MACD': technical['MACD'],
-                            'MACD_Signal': technical['MACD_Signal'],
-                            'MACD_Histogram': technical['MACD_Histogram'],
-                            'BB_Upper': technical['BB_Upper'],
-                            'BB_Middle': technical['BB_Middle'],
-                            'BB_Lower': technical['BB_Lower']
-                        })
-                        
-                        # Add signal indicators
-                        tech_df['Price_vs_SMA20'] = np.where(tech_df['Close_Price'] > tech_df['SMA_20'], 'Above', 'Below')
-                        tech_df['Price_vs_SMA50'] = np.where(tech_df['Close_Price'] > tech_df['SMA_50'], 'Above', 'Below')
-                        tech_df['RSI_Signal'] = np.where(tech_df['RSI'] > 70, 'Overbought', 
-                                                       np.where(tech_df['RSI'] < 30, 'Oversold', 'Neutral'))
-                        tech_df['MACD_Signal'] = np.where(tech_df['MACD'] > tech_df['MACD_Signal'], 'Bullish', 'Bearish')
-                        
-                        all_technical_data.append(tech_df)
+                        try:
+                            prices = self.stock_prices[ticker]
+                            technical = self.analyzer.technical_analysis(prices)
+                            
+                            tech_df = pd.DataFrame({
+                                'Date': prices.index,
+                                'Ticker': ticker,
+                                'Company_Name': name,
+                                'Close_Price': prices['Close'],
+                                'SMA_20': technical['SMA_20'],
+                                'SMA_50': technical['SMA_50'],
+                                'SMA_200': technical['SMA_200'],
+                                'RSI': technical['RSI'],
+                                'MACD': technical['MACD'],
+                                'MACD_Signal': technical['MACD_Signal'],
+                                'MACD_Histogram': technical['MACD_Histogram'],
+                                'BB_Upper': technical['BB_Upper'],
+                                'BB_Middle': technical['BB_Middle'],
+                                'BB_Lower': technical['BB_Lower']
+                            })
+                            
+                            # Add signal indicators
+                            tech_df['Price_vs_SMA20'] = np.where(tech_df['Close_Price'] > tech_df['SMA_20'], 'Above', 'Below')
+                            tech_df['Price_vs_SMA50'] = np.where(tech_df['Close_Price'] > tech_df['SMA_50'], 'Above', 'Below')
+                            tech_df['RSI_Signal'] = np.where(tech_df['RSI'] > 70, 'Overbought', 
+                                                           np.where(tech_df['RSI'] < 30, 'Oversold', 'Neutral'))
+                            tech_df['MACD_Signal'] = np.where(tech_df['MACD'] > tech_df['MACD_Signal'], 'Bullish', 'Bearish')
+                            
+                            all_technical_data.append(tech_df)
+                        except Exception as e:
+                            print(f"⚠️  Warning: Could not calculate technical indicators for {ticker}: {e}")
                 
                 if all_technical_data:
                     combined_technical = pd.concat(all_technical_data, ignore_index=True)
                     output_path = 'powerbi/data/technical_indicators.csv'
                     combined_technical.to_csv(output_path, index=False)
-                    logger.info(f"Technical indicators exported to {output_path}")
+                    exported_files.append('technical_indicators.csv')
+                    print(f"✅ Technical indicators exported to {output_path}")
+                else:
+                    print("⚠️  Warning: No technical indicators to export")
             except Exception as e:
+                print(f"❌ ERROR: Failed to export technical indicators: {e}")
                 logger.error(f"Error exporting technical indicators: {e}")
                 success = False
+        else:
+            print("⚠️  Warning: No stock prices for technical indicators")
         
         # 6. Export correlation matrix
         if len(self.stock_prices) >= 2:
             try:
+                print("📊 Exporting correlation matrix...")
                 all_returns = {}
                 for ticker, prices in self.stock_prices.items():
                     returns = prices['Close'].pct_change().dropna()
@@ -527,48 +718,67 @@ class EnhancedDataFetcher:
                         correlation_df = pd.DataFrame(correlation_data)
                         output_path = 'powerbi/data/correlation_matrix.csv'
                         correlation_df.to_csv(output_path, index=False)
-                        logger.info(f"Correlation matrix exported to {output_path}")
+                        exported_files.append('correlation_matrix.csv')
+                        print(f"✅ Correlation matrix exported to {output_path}")
+                    else:
+                        print("⚠️  Warning: No correlation data to export")
+                else:
+                    print("⚠️  Warning: Insufficient returns data for correlation matrix")
             except Exception as e:
+                print(f"❌ ERROR: Failed to export correlation matrix: {e}")
                 logger.error(f"Error exporting correlation matrix: {e}")
                 success = False
+        else:
+            print("⚠️  Warning: Need at least 2 companies for correlation matrix")
         
-        if success:
-            logger.info("All PowerBI data exported successfully!")
-            print("\nPowerBI Data Export Summary:")
-            print("="*40)
-            print("Files exported to 'powerbi/data/' directory:")
-            print("• company_summary.csv")
-            print("• stock_prices.csv")
-            print("• risk_metrics.csv")
-            print("• portfolio_analysis.csv")
-            print("• technical_indicators.csv")
-            print("• correlation_matrix.csv")
+        if success and exported_files:
+            print(f"\n✅ PowerBI export completed successfully!")
+            print(f"📁 Exported {len(exported_files)} files to 'powerbi/data/' directory:")
+            for file in exported_files:
+                print(f"   • {file}")
+        elif not exported_files:
+            print("⚠️  Warning: No files were exported")
+            success = False
+        else:
+            print("⚠️  Warning: Some exports failed")
         
         return success
     
     def load_data_to_database(self):
         """Load collected data into database for main analysis"""
-        logger.info("Loading collected data into database...")
+        print("\n🗄️  Loading data to database...")
         
         try:
             # Create database and tables
+            print("🔧 Creating database and tables...")
             if not create_database():
+                print("⚠️  Warning: Failed to create database, continuing without database")
                 logger.warning("Failed to create database, continuing without database")
                 return True
             
             # Connect to database
+            print("🔌 Connecting to database...")
             if not self.db_manager.connect():
+                print("⚠️  Warning: Failed to connect to database, continuing without database")
                 logger.warning("Failed to connect to database, continuing without database")
                 return True
             
             # Load company summaries
+            print("📋 Loading company summaries...")
+            summary_count = 0
             for ticker, summary in self.company_summaries.items():
                 try:
                     self.db_manager.insert_company_summary(summary)
+                    summary_count += 1
                 except Exception as e:
+                    print(f"⚠️  Warning: Error inserting company summary for {ticker}: {e}")
                     logger.warning(f"Error inserting company summary for {ticker}: {e}")
             
+            print(f"✅ Loaded {summary_count} company summaries")
+            
             # Load stock prices
+            print("📈 Loading stock prices...")
+            price_count = 0
             for ticker, prices in self.stock_prices.items():
                 try:
                     for date, row in prices.iterrows():
@@ -582,87 +792,165 @@ class EnhancedDataFetcher:
                             'volume': row['Volume']
                         }
                         self.db_manager.insert_stock_price(price_data)
+                        price_count += 1
                 except Exception as e:
+                    print(f"⚠️  Warning: Error inserting stock prices for {ticker}: {e}")
                     logger.warning(f"Error inserting stock prices for {ticker}: {e}")
             
-            logger.info("Data successfully loaded into database")
+            print(f"✅ Loaded {price_count} stock price records")
+            print("✅ Data successfully loaded into database")
             return True
             
         except Exception as e:
+            print(f"❌ ERROR: Failed to load data to database: {e}")
+            print(f"   Stack trace: {traceback.format_exc()}")
             logger.error(f"Error loading data to database: {e}")
-            logger.warning("Database loading failed, but the application will continue with CSV exports")
+            print("⚠️  Warning: Database loading failed, but the application will continue with CSV exports")
             return False
         finally:
             if self.db_manager.connection:
-                self.db_manager.disconnect()
+                try:
+                    self.db_manager.disconnect()
+                    print("🔌 Database connection closed")
+                except Exception as e:
+                    print(f"⚠️  Warning: Error closing database connection: {e}")
     
     def run_unified_data_pipeline(self):
         """Run the complete unified data pipeline"""
-        logger.info("Starting unified data pipeline...")
+        print("\n🚀 Starting unified data pipeline...")
         
-        # Step 1: Collect all data once
-        logger.info("Step 1: Collecting all data...")
-        if not self.collect_all_data():
-            logger.error("Failed to collect data. Exiting.")
+        try:
+            # Step 1: Collect all data once
+            print("Step 1: Collecting all data...")
+            if not self.collect_all_data():
+                print("❌ ERROR: Failed to collect data. Exiting.")
+                logger.error("Failed to collect data. Exiting.")
+                return False
+            
+            # Step 2: Export PowerBI data
+            print("Step 2: Exporting data to PowerBI CSV files...")
+            powerbi_success = self.export_powerbi_data()
+            if not powerbi_success:
+                print("⚠️  Warning: PowerBI export failed, but continuing with database loading")
+                logger.warning("PowerBI export failed, but continuing with database loading")
+            
+            # Step 3: Load data to database
+            print("Step 3: Loading data to database...")
+            db_success = self.load_data_to_database()
+            if not db_success:
+                print("⚠️  Warning: Database loading failed, but CSV exports were successful")
+                logger.warning("Database loading failed, but CSV exports were successful")
+            
+            print("✅ Unified data pipeline completed!")
+            return powerbi_success or db_success  # Return True if at least one succeeded
+            
+        except Exception as e:
+            print(f"❌ ERROR: Failed during unified data pipeline: {e}")
+            print(f"   Stack trace: {traceback.format_exc()}")
+            logger.error(f"Error in unified data pipeline: {e}")
             return False
-        
-        # Step 2: Export PowerBI data
-        logger.info("Step 2: Exporting data to PowerBI CSV files...")
-        if not self.export_powerbi_data():
-            logger.warning("PowerBI export failed, but continuing with database loading")
-        
-        # Step 3: Load data to database
-        logger.info("Step 3: Loading data to database...")
-        self.load_data_to_database()
-        
-        logger.info("Unified data pipeline completed successfully!")
-        return True
+    
+
     
     def generate_data_summary(self):
         """Generate summary of loaded data"""
-        print("\n" + "="*80)
-        print("UNIFIED DATA PIPELINE SUMMARY")
-        print("="*80)
-        
-        if self.company_summaries:
-            print(f"\nCollected data for {len(self.company_summaries)} companies:")
-            for ticker, summary in self.company_summaries.items():
-                print(f"  • {summary['company_name']} ({ticker})")
-                if summary['current_price']:
-                    print(f"    Current Price: ${summary['current_price']:.2f}")
-                if summary['pe_ratio']:
-                    print(f"    P/E Ratio: {summary['pe_ratio']:.2f}")
-                if summary['roe']:
-                    print(f"    ROE: {summary['roe']:.2%}")
-                print()
-        else:
-            print("No data collected")
-        
-        print("Output files created:")
-        print("• powerbi/data/ - CSV files for PowerBI dashboard")
-        print("• Database - Data loaded for main analysis")
+        try:
+            print("\n" + "="*80)
+            print("UNIFIED DATA PIPELINE SUMMARY")
+            print("="*80)
+            
+            if self.company_summaries:
+                print(f"\n📊 Collected data for {len(self.company_summaries)} companies:")
+                for ticker, summary in self.company_summaries.items():
+                    try:
+                        print(f"  • {summary['company_name']} ({ticker})")
+                        if summary.get('current_price'):
+                            print(f"    Current Price: ${summary['current_price']:.2f}")
+                        if summary.get('pe_ratio'):
+                            print(f"    P/E Ratio: {summary['pe_ratio']:.2f}")
+                        if summary.get('roe'):
+                            print(f"    ROE: {summary['roe']:.2%}")
+                        if summary.get('volatility'):
+                            print(f"    Volatility: {summary['volatility']:.2%}")
+                        print()
+                    except Exception as e:
+                        print(f"  • {ticker} - Error displaying summary: {e}")
+            else:
+                print("⚠️  No company data collected")
+            
+            print("📁 Output files created:")
+            print("  • powerbi/data/ - CSV files for PowerBI dashboard")
+            print("  • Database - Data loaded for main analysis")
+            
+            # Check if files actually exist
+            powerbi_dir = 'powerbi/data'
+            if os.path.exists(powerbi_dir):
+                csv_files = [f for f in os.listdir(powerbi_dir) if f.endswith('.csv')]
+                if csv_files:
+                    print(f"  ✅ Found {len(csv_files)} CSV files in powerbi/data/")
+                else:
+                    print("  ⚠️  No CSV files found in powerbi/data/")
+            else:
+                print("  ❌ powerbi/data/ directory not found")
+                
+        except Exception as e:
+            print(f"❌ ERROR: Failed to generate data summary: {e}")
+            logger.error(f"Error generating data summary: {e}")
 
 def main():
     """Main function to run the enhanced data fetching"""
-    logger.info("Starting data setup and collection...")
-    
-    fetcher = EnhancedDataFetcher()
-    
+    print("="*80)
     print("Enhanced Renewable Energy Data Fetcher")
     print("Unified Data Collection and Export System")
-    print("="*60)
+    print("="*80)
     
-    # Run unified data pipeline
-    success = fetcher.run_unified_data_pipeline()
-    
-    if success:
-        # Generate summary
-        fetcher.generate_data_summary()
-        logger.info("Data setup completed successfully!")
-        print("\nData setup completed successfully!")
-    else:
-        logger.error("Data setup failed. Please check the logs for details.")
-        print("\nData setup failed. Please check the logs for details.")
+    try:
+        # Validate configuration first
+        if not validate_configuration():
+            print("❌ Configuration validation failed. Exiting.")
+            sys.exit(1)
+        
+        print("🚀 Starting data setup and collection...")
+        logger.info("Starting data setup and collection...")
+        
+        # Initialize the data fetcher
+        try:
+            fetcher = EnhancedDataFetcher()
+        except Exception as e:
+            print(f"❌ ERROR: Failed to initialize data fetcher: {e}")
+            print(f"   Stack trace: {traceback.format_exc()}")
+            logger.error(f"Failed to initialize data fetcher: {e}")
+            sys.exit(1)
+        
+        # Run unified data pipeline
+        success = fetcher.run_unified_data_pipeline()
+        
+        if success:
+            # Generate summary
+            try:
+                fetcher.generate_data_summary()
+            except Exception as e:
+                print(f"⚠️  Warning: Could not generate data summary: {e}")
+                logger.warning(f"Could not generate data summary: {e}")
+            
+            logger.info("Data setup completed successfully!")
+            print("\n🎉 Data setup completed successfully!")
+            print("📁 Check the 'powerbi/data/' directory for exported CSV files")
+            print("📊 Check the database for stored data")
+        else:
+            logger.error("Data setup failed. Please check the logs for details.")
+            print("\n❌ Data setup failed. Please check the logs for details.")
+            print("📋 Check the console output above for specific error messages")
+            sys.exit(1)
+            
+    except KeyboardInterrupt:
+        print("\n⚠️  Process interrupted by user")
+        sys.exit(1)
+    except Exception as e:
+        print(f"\n❌ CRITICAL ERROR: {e}")
+        print(f"   Stack trace: {traceback.format_exc()}")
+        logger.critical(f"Critical error in main: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main() 
