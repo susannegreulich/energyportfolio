@@ -233,6 +233,15 @@ def main():
                 print(f"  Volatility: {result['volatility']:.4f} ({result['volatility']*100:.2f}%)")
                 print(f"  Sharpe Ratio: {result['sharpe_ratio']:.4f}")
                 print()
+            
+            # Save results for use by other scripts
+            try:
+                import pickle
+                with open("temp_optimization_results.pkl", 'wb') as f:
+                    pickle.dump(optimization_results, f)
+                print("Optimization results saved for use by other scripts")
+            except Exception as e:
+                print(f"WARNING: Could not save optimization results: {e}")
         else:
             logger.warning("Portfolio optimization failed or returned no results")
             print("FAILURE: Portfolio optimization failed or returned no results")

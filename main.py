@@ -66,12 +66,31 @@ def run_script(script_name, description):
     print(f"{'='*60}")
     
     try:
-        result = subprocess.run([sys.executable, script_name], 
-                              capture_output=True, text=True, check=True)
-        print(result.stdout)
-        if result.stderr:
-            logger.warning(f"Warnings from {script_name}: {result.stderr}")
-        return True
+        # Use Popen for real-time output with unbuffered mode
+        process = subprocess.Popen([sys.executable, "-u", script_name],  # -u flag forces unbuffered output
+                                 stdout=subprocess.PIPE, 
+                                 stderr=subprocess.STDOUT,  # Redirect stderr to stdout
+                                 text=True, 
+                                 bufsize=0,  # Unbuffered
+                                 universal_newlines=True)
+        
+        # Print output in real-time with immediate flushing
+        while True:
+            output = process.stdout.readline()
+            if output == '' and process.poll() is not None:
+                break
+            if output:
+                print(output.rstrip(), flush=True)  # Force immediate output
+        
+        # Wait for process to complete
+        return_code = process.poll()
+        
+        if return_code == 0:
+            return True
+        else:
+            logger.error(f"Script {script_name} failed with return code {return_code}")
+            return False
+            
     except subprocess.CalledProcessError as e:
         logger.error(f"Error running {script_name}: {e}")
         print(f"Error: {e}")

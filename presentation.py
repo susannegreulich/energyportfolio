@@ -1,547 +1,343 @@
 """
-Comprehensive Presentation Module for Renewable Energy Investment Analysis
-Handles both report generation and visualization charts
+Presentation Script with Pre-computed Results for Renewable Energy Investment Analysis
+This script is designed to be called from the main pipeline with results from previous steps
 """
 
+import sys
+import logging
+import os
+import pickle
+from datetime import datetime
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import os
-import logging
-import warnings
-from datetime import datetime
-warnings.filterwarnings('ignore')
-
-from config import *
-from database import DatabaseManager
-from investment_analysis import InvestmentAnalyzer
-from portfolio_optimization import PortfolioOptimizer
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 class PresentationManager:
-    """Handles comprehensive presentation generation including reports and charts"""
+    """Manages presentation generation with optional pre-computed results"""
     
-    def __init__(self):
-        """Initialize the presentation manager"""
+    def __init__(self, analysis_results=None, optimization_results=None):
+        """Initialize presentation manager with optional pre-computed results"""
+        self.analysis_results = analysis_results
+        self.optimization_results = optimization_results
+        
+        # Import required modules
         try:
-            self.db_manager = DatabaseManager()
+            from investment_analysis import InvestmentAnalyzer
+            from database import DatabaseManager
             self.analyzer = InvestmentAnalyzer()
-            self.optimizer = PortfolioOptimizer()
-            
-            # Create directories
-            os.makedirs('reports', exist_ok=True)
-            os.makedirs('charts', exist_ok=True)
-            
-            logger.info("PresentationManager initialized successfully")
-        except Exception as e:
-            logger.error(f"Error initializing PresentationManager: {e}")
-            print(f"ERROR: Failed to initialize PresentationManager: {e}")
+            self.db_manager = DatabaseManager()
+        except ImportError as e:
+            logger.error(f"Failed to import required modules: {e}")
             raise
-    
-    # ==================== REPORT GENERATION METHODS ====================
-    
-    def generate_comprehensive_report(self):
-        """Generate comprehensive investment analysis report"""
-        logger.info("Generating comprehensive analysis report...")
         
-        try:
-            # Create report file
-            report_path = f"reports/renewable_energy_analysis_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
-            
-            with open(report_path, 'w') as f:
-                f.write("="*80 + "\n")
-                f.write("RENEWABLE ENERGY INVESTMENT ANALYSIS REPORT\n")
-                f.write("="*80 + "\n")
-                f.write(f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-                f.write(f"Analysis Period: {DATA_START_DATE} to {DATA_END_DATE}\n")
-                f.write("="*80 + "\n\n")
-                
-                # Company analysis
-                f.write("1. INDIVIDUAL COMPANY ANALYSIS\n")
-                f.write("-" * 40 + "\n\n")
-                
-                try:
-                    analysis_results, detailed_reports = self.analyzer.analyze_all_companies()
-                except Exception as e:
-                    logger.error(f"Error during company analysis: {e}")
-                    print(f"ERROR: Failed to analyze companies: {e}")
-                    f.write(f"ERROR: Company analysis failed - {e}\n\n")
-                    analysis_results, detailed_reports = [], []
-                
-                # Write detailed individual company reports
-                if detailed_reports:
-                    f.write("DETAILED INDIVIDUAL COMPANY ANALYSIS\n")
-                    f.write("=" * 50 + "\n\n")
-                    for report in detailed_reports:
-                        f.write(report)
-                        f.write("\n" + "="*80 + "\n\n")
-                
-                if analysis_results:
-                    # Summary table
-                    f.write("Investment Recommendations Summary:\n")
-                    f.write("-" * 50 + "\n")
-                    f.write(f"{'Ticker':<12} {'Score':<8} {'Recommendation':<15} {'Sharpe':<8} {'Volatility':<12}\n")
-                    f.write("-" * 50 + "\n")
-                    
-                    for result in analysis_results:
-                        ticker = result['ticker']
-                        score = result['score']
-                        recommendation = result['recommendation']
-                        sharpe = result['risk_metrics']['Sharpe_Ratio']
-                        volatility = result['risk_metrics']['Volatility']
-                        
-                        f.write(f"{ticker:<12} {score:<8.1f} {recommendation:<15} {sharpe:<8.3f} {volatility:<12.3f}\n")
-                    
-                    f.write("\n" + "="*80 + "\n")
-                    f.write("2. PORTFOLIO OPTIMIZATION RESULTS\n")
-                    f.write("="*80 + "\n\n")
-                    
-                    # Portfolio optimization
-                    try:
-                        optimization_results = self.optimizer.generate_portfolio_optimization()
-                    except Exception as e:
-                        logger.error(f"Error during portfolio optimization: {e}")
-                        print(f"ERROR: Failed to generate portfolio optimization: {e}")
-                        f.write(f"ERROR: Portfolio optimization failed - {e}\n\n")
-                        optimization_results = {}
-                    
-                    if optimization_results:
-                        f.write("Portfolio Optimization Results:\n")
-                        f.write("-" * 40 + "\n")
-                        
-                        for method, result in optimization_results.items():
-                            f.write(f"\n{method.upper()} OPTIMIZATION:\n")
-                            f.write(f"  Expected Return: {result['expected_return']:.4f} ({result['expected_return']*100:.2f}%)\n")
-                            f.write(f"  Volatility: {result['volatility']:.4f} ({result['volatility']*100:.2f}%)\n")
-                            f.write(f"  Sharpe Ratio: {result['sharpe_ratio']:.4f}\n")
-                            f.write("  Portfolio Weights:\n")
-                            
-                            for i, ticker in enumerate(self.analyzer.companies.values()):
-                                if i < len(result['weights']):
-                                    weight = result['weights'][i]
-                                    f.write(f"    {ticker}: {weight:.4f} ({weight*100:.2f}%)\n")
-                    
-                    f.write("\n" + "="*80 + "\n")
-                    f.write("3. RISK ANALYSIS SUMMARY\n")
-                    f.write("="*80 + "\n\n")
-                    
-                    # Risk analysis summary
-                    f.write("Key Risk Metrics:\n")
-                    f.write("-" * 30 + "\n")
-                    
-                    for result in analysis_results:
-                        ticker = result['ticker']
-                        risk_metrics = result['risk_metrics']
-                        
-                        f.write(f"\n{ticker}:\n")
-                        f.write(f"  Volatility: {risk_metrics['Volatility']:.4f}\n")
-                        f.write(f"  Sharpe Ratio: {risk_metrics['Sharpe_Ratio']:.4f}\n")
-                        f.write(f"  Max Drawdown: {risk_metrics['Max_Drawdown']:.4f}\n")
-                        f.write(f"  VaR (95%): {risk_metrics['VaR_95']:.4f}\n")
-                    
-                    f.write("\n" + "="*80 + "\n")
-                    f.write("4. INVESTMENT RECOMMENDATIONS\n")
-                    f.write("="*80 + "\n\n")
-                    
-                    # Top recommendations
-                    top_picks = [r for r in analysis_results if r['score'] >= 2]
-                    if top_picks:
-                        f.write("TOP RECOMMENDATIONS:\n")
-                        f.write("-" * 25 + "\n")
-                        for result in top_picks:
-                            f.write(f"• {result['ticker']}: {result['recommendation']}\n")
-                            f.write(f"  Score: {result['score']}, Reasons: {', '.join(result['reasons'])}\n\n")
-                    else:
-                        f.write("No strong buy recommendations at this time.\n\n")
-                    
-                    # Risk warnings
-                    f.write("RISK WARNINGS:\n")
-                    f.write("-" * 15 + "\n")
-                    f.write("• Past performance does not guarantee future results\n")
-                    f.write("• Renewable energy sector is subject to regulatory changes\n")
-                    f.write("• Currency fluctuations may affect international stocks\n")
-                    f.write("• Consider diversification across different renewable energy subsectors\n")
-                    f.write("• Monitor policy changes and government incentives\n\n")
-                    
-                    f.write("="*80 + "\n")
-                    f.write("END OF REPORT\n")
-                    f.write("="*80 + "\n")
-            
-            logger.info(f"Comprehensive report saved to {report_path}")
-            return report_path
-            
-        except Exception as e:
-            logger.error(f"Error generating comprehensive report: {e}")
-            print(f"ERROR: Failed to generate comprehensive report: {e}")
-            raise
-    
-    # ==================== VISUALIZATION METHODS ====================
-    
-    def generate_risk_analysis_charts(self, save_path=None):
-        """Generate risk analysis charts for all companies"""
-        try:
-            if not self.db_manager.connect():
-                logger.warning("Database connection failed, skipping risk analysis charts")
-                return
-            
-            # Get data for all companies
-            all_returns = {}
-            risk_metrics = {}
-            
-            for name, ticker in self.analyzer.companies.items():
-                prices = self.db_manager.get_stock_prices(ticker)
-                if not prices.empty:
-                    returns = prices['Close'].pct_change().dropna()
-                    all_returns[ticker] = returns
-                    risk_metrics[ticker] = self.analyzer.risk_analysis(returns)
-            
-            if not all_returns:
-                logger.warning("No data available for risk analysis")
-                return
-            
-            # Create risk analysis charts
-            fig, axes = plt.subplots(2, 2, figsize=(15, 12))
-            fig.suptitle('Risk Analysis: Renewable Energy Companies', fontsize=16)
-            
-            # Volatility comparison
-            volatilities = [metrics['Volatility'] for metrics in risk_metrics.values()]
-            tickers = list(risk_metrics.keys())
-            
-            axes[0, 0].bar(tickers, volatilities, color='skyblue', alpha=0.7)
-            axes[0, 0].set_title('Annualized Volatility')
-            axes[0, 0].set_ylabel('Volatility')
-            axes[0, 0].tick_params(axis='x', rotation=45)
-            axes[0, 0].grid(True, alpha=0.3)
-            
-            # Sharpe ratio comparison
-            sharpe_ratios = [metrics['Sharpe_Ratio'] for metrics in risk_metrics.values()]
-            
-            axes[0, 1].bar(tickers, sharpe_ratios, color='lightgreen', alpha=0.7)
-            axes[0, 1].set_title('Sharpe Ratio')
-            axes[0, 1].set_ylabel('Sharpe Ratio')
-            axes[0, 1].tick_params(axis='x', rotation=45)
-            axes[0, 1].grid(True, alpha=0.3)
-            
-            # Maximum drawdown comparison
-            max_drawdowns = [metrics['Max_Drawdown'] for metrics in risk_metrics.values()]
-            
-            axes[1, 0].bar(tickers, max_drawdowns, color='salmon', alpha=0.7)
-            axes[1, 0].set_title('Maximum Drawdown')
-            axes[1, 0].set_ylabel('Max Drawdown')
-            axes[1, 0].tick_params(axis='x', rotation=45)
-            axes[1, 0].grid(True, alpha=0.3)
-            
-            # Correlation heatmap
-            returns_df = pd.DataFrame(all_returns)
-            correlation_matrix = returns_df.corr()
-            
-            sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', center=0, 
-                       ax=axes[1, 1], cbar_kws={'label': 'Correlation'})
-            axes[1, 1].set_title('Correlation Matrix')
-            
-            plt.tight_layout()
-            
-            if save_path:
-                try:
-                    plt.savefig(save_path, dpi=300, bbox_inches='tight')
-                    logger.info(f"Risk analysis chart saved to {save_path}")
-                except Exception as e:
-                    logger.error(f"Error saving risk analysis chart to {save_path}: {e}")
-                    print(f"ERROR: Failed to save risk analysis chart to {save_path}: {e}")
-            else:
-                plt.show()
-            
-            plt.close()
-            
-        except Exception as e:
-            logger.error(f"Error generating risk analysis charts: {e}")
-            print(f"ERROR: Failed to generate risk analysis charts: {e}")
-        finally:
-            try:
-                self.db_manager.disconnect()
-            except Exception as e:
-                logger.error(f"Error disconnecting from database: {e}")
-                print(f"WARNING: Error disconnecting from database: {e}")
-    
-    def generate_technical_charts(self, ticker, save_path=None):
-        """Generate technical analysis charts for a single company"""
-        try:
-            if not self.db_manager.connect():
-                logger.warning(f"Database connection failed for {ticker}, skipping chart generation")
-                return
-            
-            # Get stock data
-            prices = self.db_manager.get_stock_prices(ticker)
-            if prices.empty:
-                logger.warning(f"No data available for {ticker}")
-                return
-            
-            # Calculate technical indicators
-            technical = self.analyzer.technical_analysis(prices)
-            
-            # Create subplots
-            fig, axes = plt.subplots(3, 1, figsize=(15, 12))
-            fig.suptitle(f'Technical Analysis: {ticker}', fontsize=16)
-            
-            # Price and moving averages
-            axes[0].plot(prices.index, prices['Close'], label='Close Price', linewidth=2)
-            axes[0].plot(prices.index, technical['SMA_20'], label='SMA 20', alpha=0.7)
-            axes[0].plot(prices.index, technical['SMA_50'], label='SMA 50', alpha=0.7)
-            axes[0].plot(prices.index, technical['SMA_200'], label='SMA 200', alpha=0.7)
-            axes[0].fill_between(prices.index, technical['BB_Upper'], technical['BB_Lower'], 
-                               alpha=0.1, label='Bollinger Bands')
-            axes[0].set_title('Price and Moving Averages')
-            axes[0].legend()
-            axes[0].grid(True, alpha=0.3)
-            
-            # RSI
-            axes[1].plot(prices.index, technical['RSI'], label='RSI', color='purple')
-            axes[1].axhline(y=70, color='r', linestyle='--', alpha=0.7, label='Overbought')
-            axes[1].axhline(y=30, color='g', linestyle='--', alpha=0.7, label='Oversold')
-            axes[1].set_title('Relative Strength Index (RSI)')
-            axes[1].legend()
-            axes[1].grid(True, alpha=0.3)
-            
-            # MACD
-            axes[2].plot(prices.index, technical['MACD'], label='MACD', color='blue')
-            axes[2].plot(prices.index, technical['MACD_Signal'], label='Signal', color='red')
-            axes[2].bar(prices.index, technical['MACD_Histogram'], label='Histogram', alpha=0.5)
-            axes[2].set_title('MACD')
-            axes[2].legend()
-            axes[2].grid(True, alpha=0.3)
-            
-            plt.tight_layout()
-            
-            if save_path:
-                try:
-                    plt.savefig(save_path, dpi=300, bbox_inches='tight')
-                    logger.info(f"Technical chart saved to {save_path}")
-                except Exception as e:
-                    logger.error(f"Error saving technical chart to {save_path}: {e}")
-                    print(f"ERROR: Failed to save technical chart to {save_path}: {e}")
-            else:
-                plt.show()
-            
-            plt.close()
-            
-        except Exception as e:
-            logger.error(f"Error generating technical charts for {ticker}: {e}")
-            print(f"ERROR: Failed to generate technical charts for {ticker}: {e}")
-        finally:
-            try:
-                self.db_manager.disconnect()
-            except Exception as e:
-                logger.error(f"Error disconnecting from database: {e}")
-                print(f"WARNING: Error disconnecting from database: {e}")
-    
-    def generate_all_technical_charts(self):
-        """Generate technical charts for all companies"""
-        logger.info("Generating technical analysis charts for all companies...")
+        # Create output directories
+        os.makedirs('reports', exist_ok=True)
+        os.makedirs('charts', exist_ok=True)
         
-        for name, ticker in self.analyzer.companies.items():
-            try:
-                logger.info(f"Generating technical chart for {ticker}...")
-                chart_path = f"charts/technical_{ticker.replace('.', '_')}.png"
-                self.generate_technical_charts(ticker, chart_path)
-            except Exception as e:
-                logger.error(f"Error generating technical chart for {ticker}: {e}")
-                print(f"ERROR: Failed to generate technical chart for {ticker}: {e}")
-                continue
-    
-    def generate_comprehensive_dashboard(self, save_path=None):
-        """Generate a comprehensive dashboard with both risk and technical analysis"""
-        try:
-            if not self.db_manager.connect():
-                logger.warning("Database connection failed, skipping dashboard generation")
-                return
-            
-            # Create a large figure for the dashboard
-            fig = plt.figure(figsize=(20, 16))
-            
-            # Create grid layout
-            gs = fig.add_gridspec(4, 4, hspace=0.3, wspace=0.3)
-            
-            # Get data for all companies
-            all_returns = {}
-            risk_metrics = {}
-            
-            for name, ticker in self.analyzer.companies.items():
-                prices = self.db_manager.get_stock_prices(ticker)
-                if not prices.empty:
-                    returns = prices['Close'].pct_change().dropna()
-                    all_returns[ticker] = returns
-                    risk_metrics[ticker] = self.analyzer.risk_analysis(returns)
-            
-            if not all_returns:
-                logger.warning("No data available for dashboard")
-                return
-            
-            tickers = list(risk_metrics.keys())
-            
-            # 1. Volatility comparison (top left)
-            ax1 = fig.add_subplot(gs[0, 0])
-            volatilities = [metrics['Volatility'] for metrics in risk_metrics.values()]
-            ax1.bar(tickers, volatilities, color='skyblue', alpha=0.7)
-            ax1.set_title('Annualized Volatility', fontsize=12)
-            ax1.tick_params(axis='x', rotation=45)
-            ax1.grid(True, alpha=0.3)
-            
-            # 2. Sharpe ratio comparison (top right)
-            ax2 = fig.add_subplot(gs[0, 1])
-            sharpe_ratios = [metrics['Sharpe_Ratio'] for metrics in risk_metrics.values()]
-            ax2.bar(tickers, sharpe_ratios, color='lightgreen', alpha=0.7)
-            ax2.set_title('Sharpe Ratio', fontsize=12)
-            ax2.tick_params(axis='x', rotation=45)
-            ax2.grid(True, alpha=0.3)
-            
-            # 3. Maximum drawdown comparison (second row left)
-            ax3 = fig.add_subplot(gs[1, 0])
-            max_drawdowns = [metrics['Max_Drawdown'] for metrics in risk_metrics.values()]
-            ax3.bar(tickers, max_drawdowns, color='salmon', alpha=0.7)
-            ax3.set_title('Maximum Drawdown', fontsize=12)
-            ax3.tick_params(axis='x', rotation=45)
-            ax3.grid(True, alpha=0.3)
-            
-            # 4. Correlation heatmap (second row right)
-            ax4 = fig.add_subplot(gs[1, 1])
-            returns_df = pd.DataFrame(all_returns)
-            correlation_matrix = returns_df.corr()
-            sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', center=0, 
-                       ax=ax4, cbar_kws={'label': 'Correlation'})
-            ax4.set_title('Correlation Matrix', fontsize=12)
-            
-            # 5. Price comparison for top 3 companies (bottom half)
-            ax5 = fig.add_subplot(gs[2:, :])
-            
-            # Get top 3 companies by Sharpe ratio
-            top_companies = sorted(risk_metrics.items(), key=lambda x: x[1]['Sharpe_Ratio'], reverse=True)[:3]
-            
-            for ticker, metrics in top_companies:
-                prices = self.db_manager.get_stock_prices(ticker)
-                if not prices.empty:
-                    # Normalize prices to start at 100 for comparison
-                    normalized_prices = (prices['Close'] / prices['Close'].iloc[0]) * 100
-                    ax5.plot(prices.index, normalized_prices, label=f'{ticker} (Sharpe: {metrics["Sharpe_Ratio"]:.2f})', linewidth=2)
-            
-            ax5.set_title('Price Performance Comparison (Top 3 by Sharpe Ratio)', fontsize=14)
-            ax5.legend()
-            ax5.grid(True, alpha=0.3)
-            ax5.set_ylabel('Normalized Price (Base=100)')
-            
-            fig.suptitle('Renewable Energy Investment Analysis Dashboard', fontsize=16, y=0.98)
-            
-            if save_path:
-                try:
-                    plt.savefig(save_path, dpi=300, bbox_inches='tight')
-                    logger.info(f"Comprehensive dashboard saved to {save_path}")
-                except Exception as e:
-                    logger.error(f"Error saving comprehensive dashboard to {save_path}: {e}")
-                    print(f"ERROR: Failed to save comprehensive dashboard to {save_path}: {e}")
-            else:
-                plt.show()
-            
-            plt.close()
-            
-        except Exception as e:
-            logger.error(f"Error generating comprehensive dashboard: {e}")
-            print(f"ERROR: Failed to generate comprehensive dashboard: {e}")
-        finally:
-            try:
-                self.db_manager.disconnect()
-            except Exception as e:
-                logger.error(f"Error disconnecting from database: {e}")
-                print(f"WARNING: Error disconnecting from database: {e}")
-    
-    def generate_all_charts(self):
-        """Generate all types of charts"""
-        logger.info("Starting comprehensive chart generation...")
-        
-        try:
-            # Generate risk analysis charts
-            risk_chart_path = "charts/risk_analysis.png"
-            self.generate_risk_analysis_charts(risk_chart_path)
-        except Exception as e:
-            logger.error(f"Error generating risk analysis charts: {e}")
-            print(f"ERROR: Failed to generate risk analysis charts: {e}")
-        
-        try:
-            # Generate technical charts for all companies
-            self.generate_all_technical_charts()
-        except Exception as e:
-            logger.error(f"Error generating technical charts: {e}")
-            print(f"ERROR: Failed to generate technical charts: {e}")
-        
-        try:
-            # Generate comprehensive dashboard
-            dashboard_path = "charts/comprehensive_dashboard.png"
-            self.generate_comprehensive_dashboard(dashboard_path)
-        except Exception as e:
-            logger.error(f"Error generating comprehensive dashboard: {e}")
-            print(f"ERROR: Failed to generate comprehensive dashboard: {e}")
-        
-        logger.info("All charts generation completed!")
-    
-    # ==================== COMPREHENSIVE PRESENTATION METHODS ====================
+        logger.info("PresentationManager initialized successfully")
     
     def generate_comprehensive_presentation(self):
-        """Generate both comprehensive report and all charts"""
-        logger.info("Starting comprehensive presentation generation...")
-        
+        """Generate comprehensive presentation with all analysis results"""
         try:
-            # Generate comprehensive report
-            report_path = self.generate_comprehensive_report()
-        except Exception as e:
-            logger.error(f"Error generating comprehensive report: {e}")
-            print(f"ERROR: Failed to generate comprehensive report: {e}")
-            report_path = None
-        
-        try:
-            # Generate all charts
-            self.generate_all_charts()
-        except Exception as e:
-            logger.error(f"Error generating charts: {e}")
-            print(f"ERROR: Failed to generate charts: {e}")
-        
-        logger.info("Comprehensive presentation generation completed!")
-        print("Comprehensive presentation generation completed!")
-        
-        if report_path:
-            print(f"Report saved to: {report_path}")
-        else:
-            print("WARNING: Report generation failed")
+            logger.info("Starting comprehensive presentation generation...")
+            print("Starting comprehensive presentation generation...")
             
-        print("Charts saved to: charts/")
-        print("Generated files:")
-        print("- charts/risk_analysis.png")
-        print("- charts/technical_[TICKER].png (for each company)")
-        print("- charts/comprehensive_dashboard.png")
-        
-        return report_path
+            # Generate analysis reports if not provided
+            if self.analysis_results is None:
+                logger.info("No pre-computed analysis results, running analysis...")
+                print("Running investment analysis...")
+                analysis_results, detailed_reports = self.analyzer.analyze_all_companies()
+                self.analysis_results = analysis_results
+            else:
+                logger.info("Using pre-computed analysis results")
+                print("Using pre-computed analysis results")
+            
+            # Generate optimization results if not provided
+            if self.optimization_results is None:
+                logger.info("No pre-computed optimization results, running optimization...")
+                print("Running portfolio optimization...")
+                from portfolio_optimization import PortfolioOptimizer
+                optimizer = PortfolioOptimizer()
+                self.optimization_results = optimizer.generate_portfolio_optimization()
+            else:
+                logger.info("Using pre-computed optimization results")
+                print("Using pre-computed optimization results")
+            
+            # Generate summary report
+            self._generate_summary_report()
+            
+            # Generate detailed reports
+            self._generate_detailed_reports()
+            
+            # Generate portfolio report
+            if self.optimization_results:
+                self._generate_portfolio_report()
+            
+            logger.info("Comprehensive presentation generation completed!")
+            print("Comprehensive presentation generation completed successfully!")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error generating comprehensive presentation: {e}")
+            print(f"ERROR: Failed to generate comprehensive presentation: {e}")
+            return False
+    
+    def _generate_summary_report(self):
+        """Generate summary report with key findings"""
+        try:
+            report_path = "reports/investment_summary_report.txt"
+            
+            with open(report_path, 'w') as f:
+                f.write("=" * 80 + "\n")
+                f.write("RENEWABLE ENERGY INVESTMENT ANALYSIS - SUMMARY REPORT\n")
+                f.write("=" * 80 + "\n")
+                f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+                
+                if self.analysis_results:
+                    f.write("INVESTMENT RECOMMENDATIONS:\n")
+                    f.write("-" * 40 + "\n")
+                    
+                    buy_count = 0
+                    hold_count = 0
+                    sell_count = 0
+                    
+                    # Handle list of results
+                    if isinstance(self.analysis_results, list):
+                        for result in self.analysis_results:
+                            if isinstance(result, dict) and 'recommendation' in result:
+                                ticker = result.get('ticker', 'Unknown')
+                                recommendation = result['recommendation']
+                                f.write(f"{ticker}: {recommendation}\n")
+                                
+                                if 'BUY' in recommendation.upper():
+                                    buy_count += 1
+                                elif 'SELL' in recommendation.upper():
+                                    sell_count += 1
+                                else:
+                                    hold_count += 1
+                    # Handle dictionary of results (fallback)
+                    elif isinstance(self.analysis_results, dict):
+                        for ticker, result in self.analysis_results.items():
+                            if isinstance(result, dict) and 'recommendation' in result:
+                                recommendation = result['recommendation']
+                                f.write(f"{ticker}: {recommendation}\n")
+                                
+                                if 'BUY' in recommendation.upper():
+                                    buy_count += 1
+                                elif 'SELL' in recommendation.upper():
+                                    sell_count += 1
+                                else:
+                                    hold_count += 1
+                    
+                    f.write(f"\nSummary: {buy_count} BUY, {hold_count} HOLD, {sell_count} SELL\n\n")
+                
+                if self.optimization_results:
+                    f.write("PORTFOLIO OPTIMIZATION RESULTS:\n")
+                    f.write("-" * 40 + "\n")
+                    
+                    for method, result in self.optimization_results.items():
+                        f.write(f"{method.upper()} OPTIMIZATION:\n")
+                        f.write(f"  Expected Return: {result.get('expected_return', 0):.4f} ({result.get('expected_return', 0)*100:.2f}%)\n")
+                        f.write(f"  Volatility: {result.get('volatility', 0):.4f} ({result.get('volatility', 0)*100:.2f}%)\n")
+                        f.write(f"  Sharpe Ratio: {result.get('sharpe_ratio', 0):.4f}\n\n")
+                
+                f.write("=" * 80 + "\n")
+                f.write("END OF SUMMARY REPORT\n")
+                f.write("=" * 80 + "\n")
+            
+            logger.info(f"Summary report generated: {report_path}")
+            print(f"Summary report generated: {report_path}")
+            
+        except Exception as e:
+            logger.error(f"Error generating summary report: {e}")
+            print(f"ERROR: Failed to generate summary report: {e}")
+    
+    def _generate_detailed_reports(self):
+        """Generate detailed reports for each company"""
+        try:
+            if not self.analysis_results:
+                logger.warning("No analysis results available for detailed reports")
+                return
+            
+            # Handle list of results
+            if isinstance(self.analysis_results, list):
+                for result in self.analysis_results:
+                    if isinstance(result, dict):
+                        ticker = result.get('ticker', 'Unknown')
+                        report_path = f"reports/{ticker}_detailed_report.txt"
+                        
+                        with open(report_path, 'w') as f:
+                            f.write("=" * 80 + "\n")
+                            f.write(f"DETAILED ANALYSIS REPORT: {ticker}\n")
+                            f.write("=" * 80 + "\n")
+                            f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+                            
+                            # Write all available data
+                            for key, value in result.items():
+                                f.write(f"{key.upper()}:\n")
+                                f.write("-" * 20 + "\n")
+                                f.write(f"{value}\n\n")
+                        
+                        logger.info(f"Detailed report generated for {ticker}: {report_path}")
+                
+                print(f"Detailed reports generated for {len(self.analysis_results)} companies")
+            
+            # Handle dictionary of results (fallback)
+            elif isinstance(self.analysis_results, dict):
+                for ticker, result in self.analysis_results.items():
+                    if isinstance(result, dict):
+                        report_path = f"reports/{ticker}_detailed_report.txt"
+                        
+                        with open(report_path, 'w') as f:
+                            f.write("=" * 80 + "\n")
+                            f.write(f"DETAILED ANALYSIS REPORT: {ticker}\n")
+                            f.write("=" * 80 + "\n")
+                            f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+                            
+                            # Write all available data
+                            for key, value in result.items():
+                                f.write(f"{key.upper()}:\n")
+                                f.write("-" * 20 + "\n")
+                                f.write(f"{value}\n\n")
+                        
+                        logger.info(f"Detailed report generated for {ticker}: {report_path}")
+                
+                print(f"Detailed reports generated for {len(self.analysis_results)} companies")
+            
+        except Exception as e:
+            logger.error(f"Error generating detailed reports: {e}")
+            print(f"ERROR: Failed to generate detailed reports: {e}")
+    
+    def _generate_portfolio_report(self):
+        """Generate portfolio optimization report"""
+        try:
+            if not self.optimization_results:
+                logger.warning("No optimization results available for portfolio report")
+                return
+            
+            report_path = "reports/portfolio_optimization_report.txt"
+            
+            with open(report_path, 'w') as f:
+                f.write("=" * 80 + "\n")
+                f.write("PORTFOLIO OPTIMIZATION REPORT\n")
+                f.write("=" * 80 + "\n")
+                f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+                
+                for method, result in self.optimization_results.items():
+                    f.write(f"{method.upper()} OPTIMIZATION:\n")
+                    f.write("-" * 40 + "\n")
+                    
+                    for key, value in result.items():
+                        if key == 'weights':
+                            f.write(f"{key}:\n")
+                            # Handle different weight formats
+                            if isinstance(value, dict):
+                                for asset, weight in value.items():
+                                    f.write(f"  {asset}: {weight:.4f} ({weight*100:.2f}%)\n")
+                            elif hasattr(value, '__iter__') and not isinstance(value, str):
+                                # Handle numpy array or list
+                                for i, weight in enumerate(value):
+                                    f.write(f"  Asset {i+1}: {weight:.4f} ({weight*100:.2f}%)\n")
+                            else:
+                                f.write(f"  {value}\n")
+                        else:
+                            f.write(f"{key}: {value}\n")
+                    f.write("\n")
+                
+                f.write("=" * 80 + "\n")
+                f.write("END OF PORTFOLIO REPORT\n")
+                f.write("=" * 80 + "\n")
+            
+            logger.info(f"Portfolio report generated: {report_path}")
+            print(f"Portfolio report generated: {report_path}")
+            
+        except Exception as e:
+            logger.error(f"Error generating portfolio report: {e}")
+            print(f"ERROR: Failed to generate portfolio report: {e}")
+
+def create_presentation_manager(analysis_results=None, optimization_results=None):
+    """Create and return a PresentationManager instance"""
+    return PresentationManager(analysis_results, optimization_results)
+
+def load_results_from_files():
+    """Load pre-computed results from files if they exist"""
+    analysis_results = None
+    optimization_results = None
+    
+    # Try to load analysis results
+    analysis_file = "temp_analysis_results.pkl"
+    if os.path.exists(analysis_file):
+        try:
+            with open(analysis_file, 'rb') as f:
+                analysis_results = pickle.load(f)
+            logger.info("Loaded pre-computed analysis results")
+        except Exception as e:
+            logger.warning(f"Could not load analysis results: {e}")
+    
+    # Try to load optimization results
+    optimization_file = "temp_optimization_results.pkl"
+    if os.path.exists(optimization_file):
+        try:
+            with open(optimization_file, 'rb') as f:
+                optimization_results = pickle.load(f)
+            logger.info("Loaded pre-computed optimization results")
+        except Exception as e:
+            logger.warning(f"Could not load optimization results: {e}")
+    
+    return analysis_results, optimization_results
+
+def cleanup_temp_files():
+    """Clean up temporary result files"""
+    temp_files = ["temp_analysis_results.pkl", "temp_optimization_results.pkl"]
+    for file in temp_files:
+        if os.path.exists(file):
+            try:
+                os.remove(file)
+                logger.info(f"Cleaned up temporary file: {file}")
+            except Exception as e:
+                logger.warning(f"Could not remove temporary file {file}: {e}")
 
 def main():
-    """Main function for comprehensive presentation generation"""
+    """Main function for presentation with pre-computed results"""
     try:
-        logger.info("Starting comprehensive presentation generation...")
-        print("Starting comprehensive presentation generation...")
+        logger.info("Starting presentation generation with pre-computed results...")
+        print("Starting presentation generation with pre-computed results...")
         
-        # Initialize presentation manager
-        presentation_manager = PresentationManager()
+        # Load pre-computed results
+        analysis_results, optimization_results = load_results_from_files()
+        
+        if analysis_results is None and optimization_results is None:
+            print("WARNING: No pre-computed results found. Running full analysis...")
+        
+        # Create presentation manager with pre-computed results
+        presentation_manager = create_presentation_manager(analysis_results, optimization_results)
         
         # Generate comprehensive presentation
-        presentation_manager.generate_comprehensive_presentation()
+        success = presentation_manager.generate_comprehensive_presentation()
         
-        logger.info("Comprehensive presentation generation completed!")
-        print("Comprehensive presentation generation completed successfully!")
+        if success:
+            # Clean up temporary files
+            cleanup_temp_files()
+            
+            logger.info("Presentation generation with pre-computed results completed!")
+            print("Presentation generation with pre-computed results completed successfully!")
+            return True
+        else:
+            logger.error("Presentation generation failed")
+            print("FAILURE: Presentation generation failed")
+            return False
         
     except Exception as e:
-        logger.error(f"Critical error in main function: {e}")
+        logger.error(f"Critical error in presentation with results: {e}")
         print(f"CRITICAL ERROR: {e}")
         print("Please check the logs for more details.")
-        raise
+        return False
 
 if __name__ == "__main__":
-    main() 
+    success = main()
+    if not success:
+        sys.exit(1) 

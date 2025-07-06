@@ -758,6 +758,15 @@ if __name__ == "__main__":
                 recommendation = result.get('recommendation', 'Unknown')
                 score = result.get('score', 0)
                 print(f"{ticker}: {recommendation} (Score: {score})")
+            
+            # Save results for use by other scripts
+            try:
+                import pickle
+                with open("temp_analysis_results.pkl", 'wb') as f:
+                    pickle.dump(results, f)
+                print("Analysis results saved for use by other scripts")
+            except Exception as e:
+                print(f"WARNING: Could not save analysis results: {e}")
         else:
             print("No analysis results generated")
             
