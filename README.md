@@ -1,6 +1,6 @@
 # Renewable Energy Investment Analysis Project
 
-A comprehensive investment analysis system for the top 10 renewable energy companies, built with Python and SQL. This project follows standard investment analysis protocols and provides detailed technical, fundamental, and risk analysis using a **Zero Duplication Unified Pipeline**.
+A comprehensive investment analysis system for the top 10 renewable energy companies, built with Python and SQL. This project provides detailed technical, fundamental, and risk analysis using a **Unified Pipeline** approach.
 
 ## 🎯 Project Overview
 
@@ -16,71 +16,29 @@ This project analyzes the following top renewable energy companies:
 - **Plug Power** (PLUG) - Hydrogen fuel cell technology
 - **First Solar** (FSLR) - Solar panel manufacturer
 
+The project uses a **Unified Investment Analysis Pipeline** that provides comprehensive analysis and exports detailed CSV data and reports.
 
-The project uses a **Unified Investment Analysis Pipeline** that eliminates all code duplication and exports comprehensive CSV data at the end using all analysis results.
+## 🏗️ Project Structure
 
-### Architecture Principles
-- ✅ **Zero Duplication** - Single source of truth for all calculations
-- ✅ **Sequential Pipeline** - Step-by-step analysis with clear dependencies
-- ✅ **Comprehensive Data Export** - CSV files with complete dataset and all analyses
-
-### Pipeline Flow
 ```
-Raw Data Collection → Technical Analysis → Risk Analysis → CSV Export
+energy_investment_project/
+├── scripts/
+│   ├── config.py              # Configuration settings and API keys
+│   ├── database.py            # Database connection and operations
+│   ├── unified_pipeline.py    # Main unified analysis pipeline
+│   ├── setup.py               # Setup and configuration script
+│   └── create_tables.sql      # Database schema
+├── requirements.txt           # Python dependencies
+├── README.md                 # This file
+├── unified_pipeline.log      # Pipeline execution logs
+├── data/                     # Raw stock price data for each company
+├── results/                  # Analysis outputs (CSV files and reports)
+│   ├── company_summary.csv
+│   ├── stock_prices.csv
+│   ├── risk_metrics.csv
+│   ├── technical_indicators.csv
+│   └── investment_analysis_report_YYYYMMDD_HHMMSS.md
 ```
-
-**Step 1: Data Collection**
-- Fetches stock prices, financial statements, company info
-- Calculates fundamental metrics (P/E, ROE, etc.)
-- Stores all raw data in memory
-
-**Step 2: Technical Analysis**
-- Calculates RSI, MACD, moving averages, Bollinger Bands
-- Uses stock price data from Step 1
-- Stores technical indicators
-
-**Step 3: Risk Analysis**
-- Calculates volatility, Sharpe ratio, VaR, maximum drawdown
-- Uses returns calculated from Step 1
-- Stores risk metrics
-
-**Step 4: CSV Export**
-- Exports ALL results from Steps 1-3
-- Creates 4 comprehensive CSV files
-- Includes all relationships and calculated fields
-
-## 📊 Analysis Data Files Generated
-
-### **1. company_summary.csv**
-**Source**: Step 1 (Data Collection)
-**Contains**:
-- Company fundamentals (P/E, ROE, debt-to-equity)
-- Market data (price, market cap)
-- Risk metrics (volatility, Sharpe ratio)
-- Calculated fields (market cap billions, risk categories)
-
-### **2. stock_prices.csv**
-**Source**: Step 1 (Data Collection)
-**Contains**:
-- Historical OHLCV data
-- Calculated returns (daily, cumulative)
-- Time dimensions (year, month, quarter)
-
-### **3. risk_metrics.csv**
-**Source**: Step 3 (Risk Analysis)
-**Contains**:
-- Volatility, annual return, Sharpe ratio
-- Maximum drawdown, VaR, CVaR
-- Risk levels and categories
-
-### **4. technical_indicators.csv**
-**Source**: Step 2 (Technical Analysis)
-**Contains**:
-- RSI, MACD, moving averages
-- Bollinger Bands
-- All technical indicators for all companies
-
-
 
 ## 📊 Analysis Components
 
@@ -106,26 +64,41 @@ Raw Data Collection → Technical Analysis → Risk Analysis → CSV Export
 - **Value at Risk (VaR)**: Potential loss estimation
 - **Conditional VaR (CVaR)**: Expected shortfall
 
+## 📊 Analysis Data Files Generated
 
+### **1. company_summary.csv**
+**Contains**:
+- Company fundamentals (P/E, ROE, debt-to-equity)
+- Market data (price, market cap)
+- Risk metrics (volatility, Sharpe ratio)
+- Calculated fields (market cap billions, risk categories)
 
-## 🏗️ Project Structure
+### **2. stock_prices.csv**
+**Contains**:
+- Historical OHLCV data
+- Calculated returns (daily, cumulative)
+- Time dimensions (year, month, quarter)
 
-```
-energy_investment_project/
-├── scripts/
-│   ├── config.py              # Configuration settings
-│   ├── database.py            # Database connection and operations
-│   ├── unified_pipeline.py    # Unified analysis pipeline
-│   ├── setup.py               # Setup and configuration script
-│   └── create_tables.sql      # Database schema
-├── requirements.txt           # Python dependencies
-├── README.md                 # This file
+### **3. risk_metrics.csv**
+**Contains**:
+- Volatility, annual return, Sharpe ratio
+- Maximum drawdown, VaR, CVaR
+- Risk levels and categories
 
-├── data/
-│   └── raw/                  # Raw data storage
-├── results/                  # All analysis outputs (CSV files and reports)
-└── charts/                   # Generated charts
-```
+### **4. technical_indicators.csv**
+**Contains**:
+- RSI, MACD, moving averages
+- Bollinger Bands
+- All technical indicators for all companies
+
+### **5. investment_analysis_report_YYYYMMDD_HHMMSS.md**
+**Contains**:
+- Executive summary
+- Company overview table
+- Fundamental analysis results
+- Risk analysis summary
+- Technical analysis overview
+- Risk warnings and disclaimers
 
 ## 🚀 Quick Start
 
@@ -147,21 +120,25 @@ energy_investment_project/
    pip install -r requirements.txt
    ```
 
-3. **Configure the database** (optional):
-   - Update `scripts/config.py` with your PostgreSQL credentials
-   - Ensure PostgreSQL is running
-   - System will work without database using direct data collection
+3. **Run the setup script** (recommended):
+   ```bash
+   python3 scripts/setup.py
+   ```
+   This will:
+   - Check Python version compatibility
+   - Install required packages
+   - Set up PostgreSQL (if available)
+   - Create necessary directories
+   - Configure the system
 
-4. **Set up API keys** (optional):
+4. **Configure API keys** (optional):
    - Get a free Finnhub API key from [finnhub.io](https://finnhub.io/)
-   - Update `scripts/config.py` with your API key
+   - Get a free Alpha Vantage API key from [alphavantage.co](https://alphavantage.co/)
+   - Update `scripts/config.py` with your API keys
 
 ### Running the Analysis
 
-
-The system uses a unified pipeline with zero code duplication. All analysis is centralized in `scripts/unified_pipeline.py` and CSV data is exported at the end using ALL analysis results.
-
-1. **Run the complete unified analysis** (recommended):
+1. **Run the complete unified analysis**:
    ```bash
    python3 scripts/unified_pipeline.py
    ```
@@ -169,33 +146,27 @@ The system uses a unified pipeline with zero code duplication. All analysis is c
    - Collect all stock and financial data
    - Perform technical analysis (RSI, MACD, moving averages)
    - Calculate risk metrics (volatility, Sharpe ratio, VaR)
-   - Export ALL results to CSV files in the analysis/ directory
+   - Export ALL results to CSV files in the `results/` directory
+   - Generate a comprehensive markdown report
 
 2. **View results**:
+   - Check `data/` for raw stock price data for each company
    - Check `results/` for all analysis outputs:
      - `company_summary.csv` - Company fundamentals + risk metrics
      - `stock_prices.csv` - Historical prices + returns
      - `risk_metrics.csv` - Risk analysis results
      - `technical_indicators.csv` - Technical indicators
      - `investment_analysis_report_YYYYMMDD_HHMMSS.md` - Comprehensive analysis report
-   - Check `charts/` for technical analysis charts
-
-**Benefits of the unified pipeline**:
-- ✅ **Zero Duplication** - All analysis centralized
-- ✅ **Complete CSV Export** - All results included
-- ✅ **Better Performance** - No redundant calculations
-- ✅ **Enhanced Reliability** - Single source of truth
 
 ## 📈 Analysis Workflow
 
 ### 1. Data Collection
 - **Stock Prices**: Historical daily prices from Yahoo Finance
 - **Financial Metrics**: Fundamental ratios and financial statements
-- **News Sentiment**: Recent news articles with sentiment analysis
 - **Market Data**: Benchmark indices and market indicators
 
 ### 2. Data Processing
-- **Database Storage**: All data stored in PostgreSQL for efficient querying
+- **Database Storage**: All data stored in PostgreSQL for efficient querying (optional)
 - **Data Cleaning**: Handle missing values and outliers
 - **Feature Engineering**: Calculate technical indicators and risk metrics
 
@@ -205,7 +176,6 @@ The system uses a unified pipeline with zero code duplication. All analysis is c
 
 ### 4. Reporting
 - **Text Reports**: Comprehensive analysis summaries
-- **Visual Charts**: Technical analysis and risk visualization
 - **CSV Export**: Data files for further analysis
 
 ## 🗄️ Database Schema
@@ -218,7 +188,6 @@ The project uses a comprehensive PostgreSQL database with the following tables:
 - **technical_indicators**: Calculated technical indicators
 - **risk_metrics**: Risk analysis results
 - **news_articles**: News data with sentiment scores
-
 - **analysis_results**: Investment recommendations
 
 ## 📊 Data Analysis
@@ -231,15 +200,16 @@ The analysis generates 4 comprehensive CSV files and a detailed markdown report 
 2. **stock_prices.csv** - Historical price data with returns
 3. **risk_metrics.csv** - Risk analysis results
 4. **technical_indicators.csv** - Technical indicators
+5. **investment_analysis_report_YYYYMMDD_HHMMSS.md** - Comprehensive analysis report
 
 ### Data Usage
 
 You can use these CSV files with any data analysis tool:
-- **Excel/Google Sheets** - For basic analysis and visualization
-- **Python** - For advanced analysis with pandas, matplotlib, etc.
-- **R** - For statistical analysis and visualization
+- **Excel/Google Sheets** - For basic analysis and data manipulation
+- **Python** - For advanced analysis with pandas, numpy, etc.
+- **R** - For statistical analysis and data processing
 - **Tableau** - For interactive dashboards
-- **PowerBI** - For business intelligence dashboards (optional)
+- **PowerBI** - For business intelligence dashboards
 - **Jupyter Notebooks** - For reproducible analysis
 
 ### Key Metrics Available
@@ -261,8 +231,6 @@ You can use these CSV files with any data analysis tool:
 - Maximum drawdown
 - Risk categories
 
-
-
 ## 🔧 Configuration
 
 ### Database Configuration
@@ -271,8 +239,8 @@ Update `scripts/config.py` with your database settings:
 DB_HOST = "localhost"
 DB_PORT = 5432
 DB_NAME = "energy_investment_db"
-DB_USER = "your_username"
-DB_PASSWORD = "your_password"
+DB_USER = "energy_user"
+DB_PASSWORD = "energy123"
 ```
 
 ### Analysis Parameters
@@ -287,16 +255,37 @@ MACD_SIGNAL = 9
 # Risk Analysis Parameters
 VAR_CONFIDENCE = 0.95
 SHARPE_RISK_FREE_RATE = 0.02
-
-
 ```
 
-## 📊 Investment Analysis Protocol Followed
+## 🔧 Technical Implementation
+
+### Python Libraries Used
+- **pandas**: Data manipulation and analysis
+- **numpy**: Numerical computations
+- **yfinance**: Yahoo Finance data collection
+- **scipy**: Statistical computations
+- **psycopg2**: PostgreSQL database connection
+- **requests**: API data collection
+- **textblob**: Sentiment analysis
+
+### Key Features
+- **Unified Pipeline**: All analysis centralized in `scripts/unified_pipeline.py`
+- **Comprehensive Data Export**: Complete CSV dataset
+- **Robust Error Handling**: Graceful handling of API failures
+- **Scalable Architecture**: Easy to add new companies or metrics
+- **Professional Reporting**: Investment-grade analysis outputs
+
+### Complete Analysis Dataset
+- ✅ 4 comprehensive CSV files
+- ✅ All analysis results included
+- ✅ All relationships preserved
+- ✅ Ready for immediate analysis with any tool
+
+## 📈 Investment Analysis Protocol Followed
 
 ### 1. **Data Collection Phase**
-- Historical price data from multiple sources
+- Historical price data from Yahoo Finance
 - Financial statements and ratios
-- News sentiment analysis
 - Market benchmark data
 
 ### 2. **Technical Analysis Phase**
@@ -317,74 +306,40 @@ SHARPE_RISK_FREE_RATE = 0.02
 - Risk-adjusted return metrics
 - Maximum drawdown analysis
 
-
-
-### 6. **Recommendation Phase**
+### 5. **Reporting Phase**
 - Comprehensive scoring system
 - Investment recommendations (Buy/Hold/Sell)
 - Risk warnings and disclaimers
 
-
-## 🔧 Technical Implementation
-
-### Python Libraries Used
-- **pandas**: Data manipulation and analysis
-- **numpy**: Numerical computations
-- **yfinance**: Yahoo Finance data collection
-- **scipy**: Statistical computations
-- **matplotlib/seaborn**: Data visualization
-- **psycopg2**: PostgreSQL database connection
-- **requests**: API data collection
-- **textblob**: Sentiment analysis
-
-### Key Features
-- **Zero Duplication**: All analysis centralized in scripts/unified_pipeline.py
-- **Comprehensive Data Export**: Complete CSV dataset
-- **Robust Error Handling**: Graceful handling of API failures
-- **Scalable Architecture**: Easy to add new companies or metrics
-- **Professional Reporting**: Investment-grade analysis outputs
-
-### Complete Analysis Dataset
-- ✅ 4 comprehensive CSV files
-- ✅ All analysis results included
-- ✅ All relationships preserved
-- ✅ Ready for immediate analysis with any tool
-
-### Maintainability Improved
-- ✅ Single source of truth
-- ✅ Clear data flow
-- ✅ Easy to modify and extend
-- ✅ Comprehensive logging
-
 ## 📈 Next Steps
 
 ### Immediate
-1. **✅ Test the unified pipeline**: `python3 main.py` - **COMPLETED**
+1. **✅ Test the unified pipeline**: `python3 scripts/unified_pipeline.py` - **COMPLETED**
 2. **✅ Verify analysis data**: Check all 4 CSV files - **COMPLETED**
 3. **📊 Use analysis data**: Import CSV files into your preferred analysis tool
 
 ### Future Enhancements
 1. **Add more companies**: Modify `self.companies` in `unified_pipeline.py`
 2. **Add new analysis**: Extend the pipeline with new methods
-3. **Add database storage**: Optionally save results to database
-4. **Add real-time updates**: Schedule pipeline execution
+3. **Add real-time updates**: Schedule pipeline execution
 
 ## 🎉 Summary
 
-The **Unified Investment Analysis Pipeline** successfully achieves:
+The **Unified Investment Analysis Pipeline** successfully provides:
 
 ✅ **Complete CSV Export** - All results included  
-✅ **Better Maintainability** - Single source of truth  
-✅ **Improved Performance** - No redundant calculations  
-✅ **Enhanced Reliability** - Consistent results  
+✅ **Comprehensive Analysis** - Technical, fundamental, and risk analysis  
+✅ **Professional Reporting** - Investment-grade analysis outputs  
+✅ **Scalable Architecture** - Easy to extend and modify  
 
-**Ready to use**: `python3 main.py`
+**Ready to use**: `python3 scripts/unified_pipeline.py`
 
 ---
 
 ## 📚 Additional Documentation
 
-- `unified_pipeline.py` - Main unified pipeline
-- `main.py` - Simple execution script
-- `config.py` - Configuration settings
-- `database.py` - Database operations (optional)
+- `scripts/unified_pipeline.py` - Main unified pipeline
+- `scripts/setup.py` - Setup and configuration script
+- `scripts/config.py` - Configuration settings
+- `scripts/database.py` - Database operations
+- `scripts/create_tables.sql` - Database schema

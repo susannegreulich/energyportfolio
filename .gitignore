@@ -2,26 +2,6 @@
 config.py
 .env
 
-# Database files
-*.db
-*.sqlite
-*.sqlite3
-
-# Data files
-data/raw/*.csv
-data/processed/
-data/exports/
-
-# Analysis outputs
-analysis/
-reports/
-charts/
-logs/
-
-# PowerBI files
-powerbi/data/*.csv
-powerbi/*.pbix
-
 # Python
 __pycache__/
 *.py[cod]
@@ -44,9 +24,6 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
-
-# Jupyter Notebook
-.ipynb_checkpoints
 
 # pyenv
 .python-version
@@ -72,11 +49,6 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-
-# Spyder project settings
-.spyderproject
-.spyproject
-
 # Rope project settings
 .ropeproject
 
