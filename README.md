@@ -1,6 +1,6 @@
 # Renewable Energy Investment Analysis Project
 
-A comprehensive investment analysis system for the top 10 renewable energy companies, built with Python, SQL, and PowerBI. This project follows standard investment analysis protocols and provides detailed technical, fundamental, and risk analysis using a **Zero Duplication Unified Pipeline**.
+A comprehensive investment analysis system for the top 10 renewable energy companies, built with Python and SQL. This project follows standard investment analysis protocols and provides detailed technical, fundamental, and risk analysis using a **Zero Duplication Unified Pipeline**.
 
 ## 🎯 Project Overview
 
@@ -17,16 +17,16 @@ This project analyzes the following top renewable energy companies:
 - **First Solar** (FSLR) - Solar panel manufacturer
 
 
-The project uses a **Unified Investment Analysis Pipeline** that eliminates all code duplication and exports PowerBI data at the end using all analysis results.
+The project uses a **Unified Investment Analysis Pipeline** that eliminates all code duplication and exports comprehensive CSV data at the end using all analysis results.
 
 ### Architecture Principles
 - ✅ **Zero Duplication** - Single source of truth for all calculations
 - ✅ **Sequential Pipeline** - Step-by-step analysis with clear dependencies
-- ✅ **Comprehensive Data Export** - PowerBI gets complete dataset with all analyses
+- ✅ **Comprehensive Data Export** - CSV files with complete dataset and all analyses
 
 ### Pipeline Flow
 ```
-Raw Data Collection → Technical Analysis → Risk Analysis → Portfolio Analysis → PowerBI Export
+Raw Data Collection → Technical Analysis → Risk Analysis → CSV Export
 ```
 
 **Step 1: Data Collection**
@@ -44,18 +44,12 @@ Raw Data Collection → Technical Analysis → Risk Analysis → Portfolio Analy
 - Uses returns calculated from Step 1
 - Stores risk metrics
 
-**Step 4: Portfolio Analysis**
-- Runs portfolio optimization (Sharpe, min variance, max return)
-- Calculates correlation matrix
-- Uses returns from Step 1
-- Stores portfolio results
-
-**Step 5: PowerBI Export**
-- Exports ALL results from Steps 1-4
-- Creates 6 comprehensive CSV files
+**Step 4: CSV Export**
+- Exports ALL results from Steps 1-3
+- Creates 4 comprehensive CSV files
 - Includes all relationships and calculated fields
 
-## 📊 PowerBI Data Files Generated
+## 📊 Analysis Data Files Generated
 
 ### **1. company_summary.csv**
 **Source**: Step 1 (Data Collection)
@@ -86,18 +80,7 @@ Raw Data Collection → Technical Analysis → Risk Analysis → Portfolio Analy
 - Bollinger Bands
 - All technical indicators for all companies
 
-### **5. portfolio_analysis.csv**
-**Source**: Step 4 (Portfolio Analysis)
-**Contains**:
-- Portfolio weights for each optimization method
-- Expected returns and volatility
-- Sharpe ratios for each portfolio
 
-### **6. correlation_matrix.csv**
-**Source**: Step 4 (Portfolio Analysis)
-**Contains**:
-- Correlation coefficients between all companies
-- Correlation categories (High/Medium/Low)
 
 ## 📊 Analysis Components
 
@@ -123,34 +106,25 @@ Raw Data Collection → Technical Analysis → Risk Analysis → Portfolio Analy
 - **Value at Risk (VaR)**: Potential loss estimation
 - **Conditional VaR (CVaR)**: Expected shortfall
 
-### 4. Portfolio Optimization
-- **Sharpe Ratio Optimization**: Maximize risk-adjusted returns
-- **Minimum Variance**: Minimize portfolio risk
-- **Maximum Return**: Maximize expected returns
-- **Equal Weight**: Benchmark comparison
-- **Backtesting**: Historical performance simulation
+
 
 ## 🏗️ Project Structure
 
 ```
 energy_investment_project/
-├── config.py                    # Configuration settings
-├── database.py                 # Database connection and operations
-├── unified_pipeline.py         # Unified analysis pipeline
-├── main_unified.py             # Main execution script
-├── requirements.txt            # Python dependencies
-├── README.md                  # This file
-├── sql/
+├── scripts/
+│   ├── config.py              # Configuration settings
+│   ├── database.py            # Database connection and operations
+│   ├── unified_pipeline.py    # Unified analysis pipeline
+│   ├── setup.py               # Setup and configuration script
 │   └── create_tables.sql      # Database schema
+├── requirements.txt           # Python dependencies
+├── README.md                 # This file
+
 ├── data/
-│   └── raw/                   # Raw data storage
-├── analysis/                  # Analysis outputs
-├── reports/                   # Generated reports
-├── charts/                    # Generated charts
-└── powerbi/
-    ├── data/                  # PowerBI data exports (CSV files)
-    ├── README.md              # PowerBI setup guide
-    └── setup_powerbi.py       # PowerBI validation script
+│   └── raw/                  # Raw data storage
+├── results/                  # All analysis outputs (CSV files and reports)
+└── charts/                   # Generated charts
 ```
 
 ## 🚀 Quick Start
@@ -159,7 +133,6 @@ energy_investment_project/
 
 1. **Python 3.8+** installed
 2. **PostgreSQL** database server (optional - system works without it)
-3. **PowerBI Desktop** (for dashboard creation)
 
 ### Installation
 
@@ -175,45 +148,41 @@ energy_investment_project/
    ```
 
 3. **Configure the database** (optional):
-   - Update `config.py` with your PostgreSQL credentials
+   - Update `scripts/config.py` with your PostgreSQL credentials
    - Ensure PostgreSQL is running
    - System will work without database using direct data collection
 
 4. **Set up API keys** (optional):
    - Get a free Finnhub API key from [finnhub.io](https://finnhub.io/)
-   - Update `config.py` with your API key
+   - Update `scripts/config.py` with your API key
 
 ### Running the Analysis
 
 
-The system uses a unified pipeline with zero code duplication. All analysis is centralized in `unified_pipeline.py` and PowerBI data is exported at the end using ALL analysis results.
+The system uses a unified pipeline with zero code duplication. All analysis is centralized in `scripts/unified_pipeline.py` and CSV data is exported at the end using ALL analysis results.
 
 1. **Run the complete unified analysis** (recommended):
    ```bash
-   python3 main_unified.py
+   python3 scripts/unified_pipeline.py
    ```
    This will:
    - Collect all stock and financial data
    - Perform technical analysis (RSI, MACD, moving averages)
    - Calculate risk metrics (volatility, Sharpe ratio, VaR)
-   - Run portfolio optimization
-   - Export ALL results to PowerBI CSV files
+   - Export ALL results to CSV files in the analysis/ directory
 
 2. **View results**:
-   - Check `powerbi/data/` for PowerBI-ready CSV files:
+   - Check `results/` for all analysis outputs:
      - `company_summary.csv` - Company fundamentals + risk metrics
      - `stock_prices.csv` - Historical prices + returns
      - `risk_metrics.csv` - Risk analysis results
      - `technical_indicators.csv` - Technical indicators
-     - `portfolio_analysis.csv` - Portfolio optimization results
-     - `correlation_matrix.csv` - Correlation analysis
-   - Check `analysis/` for analysis outputs
-   - Check `reports/` for generated reports
+     - `investment_analysis_report_YYYYMMDD_HHMMSS.md` - Comprehensive analysis report
    - Check `charts/` for technical analysis charts
 
 **Benefits of the unified pipeline**:
 - ✅ **Zero Duplication** - All analysis centralized
-- ✅ **Complete PowerBI Export** - All results included
+- ✅ **Complete CSV Export** - All results included
 - ✅ **Better Performance** - No redundant calculations
 - ✅ **Enhanced Reliability** - Single source of truth
 
@@ -232,13 +201,12 @@ The system uses a unified pipeline with zero code duplication. All analysis is c
 
 ### 3. Analysis Execution
 - **Individual Company Analysis**: Technical, fundamental, and risk assessment
-- **Portfolio Optimization**: Multi-objective portfolio construction
 - **Comparative Analysis**: Cross-company performance comparison
 
 ### 4. Reporting
 - **Text Reports**: Comprehensive analysis summaries
 - **Visual Charts**: Technical analysis and risk visualization
-- **PowerBI Integration**: Interactive dashboard creation
+- **CSV Export**: Data files for further analysis
 
 ## 🗄️ Database Schema
 
@@ -250,111 +218,55 @@ The project uses a comprehensive PostgreSQL database with the following tables:
 - **technical_indicators**: Calculated technical indicators
 - **risk_metrics**: Risk analysis results
 - **news_articles**: News data with sentiment scores
-- **portfolio_performance**: Portfolio backtesting results
+
 - **analysis_results**: Investment recommendations
 
-## 📊 PowerBI Dashboard Setup
+## 📊 Data Analysis
 
-### Quick Setup (5 Minutes)
+### Available Data Files
 
-1. **Validate Your Data**:
-   ```bash
-   python3 powerbi/setup_powerbi.py
-   ```
+The analysis generates 4 comprehensive CSV files and a detailed markdown report in the `results/` directory:
 
-2. **Import Data to PowerBI**:
-   - Open PowerBI Desktop
-   - Click "Get Data" → "Text/CSV"
-   - Import these files in order:
-     - `powerbi/data/company_summary.csv`
-     - `powerbi/data/risk_metrics.csv`
-     - `powerbi/data/technical_indicators.csv`
-     - `powerbi/data/stock_prices.csv`
-     - `powerbi/data/portfolio_analysis.csv`
-     - `powerbi/data/correlation_matrix.csv`
+1. **company_summary.csv** - Company fundamentals and metrics
+2. **stock_prices.csv** - Historical price data with returns
+3. **risk_metrics.csv** - Risk analysis results
+4. **technical_indicators.csv** - Technical indicators
 
-3. **Create Relationships**:
-   In **Model View**, create these relationships:
-   - `company_summary[ticker]` ↔ `risk_metrics[Ticker]`
-   - `company_summary[ticker]` ↔ `technical_indicators[ticker]`
-   - `company_summary[ticker]` ↔ `stock_prices[ticker]`
+### Data Usage
 
-4. **Create Key Measures**:
-   In **Data View**, create these DAX measures:
-   ```dax
-   // Portfolio Summary Measures
-   Total Market Cap = SUM(company_summary[market_cap])
-   Average Volatility = AVERAGE(risk_metrics[Volatility])
-   Average Sharpe = AVERAGE(risk_metrics[Sharpe_Ratio])
-   Average P/E = AVERAGE(company_summary[pe_ratio])
+You can use these CSV files with any data analysis tool:
+- **Excel/Google Sheets** - For basic analysis and visualization
+- **Python** - For advanced analysis with pandas, matplotlib, etc.
+- **R** - For statistical analysis and visualization
+- **Tableau** - For interactive dashboards
+- **PowerBI** - For business intelligence dashboards (optional)
+- **Jupyter Notebooks** - For reproducible analysis
 
-   // Risk Level Counts
-   High Risk Count = COUNTROWS(FILTER(company_summary, company_summary[Risk_Category] = "High"))
-   Medium Risk Count = COUNTROWS(FILTER(company_summary, company_summary[Risk_Category] = "Medium"))
-   Low Risk Count = COUNTROWS(FILTER(company_summary, company_summary[Risk_Category] = "Low"))
-   ```
+### Key Metrics Available
 
-### Essential Visualizations
+**Company Fundamentals**:
+- P/E, P/B, P/S ratios
+- ROE, ROA, profit margins
+- Debt-to-equity ratios
+- Market capitalization
 
-#### 1. Executive Summary Page
-**Company Performance Matrix (Scatter Plot)**
-- X-axis: `risk_metrics[Volatility]`
-- Y-axis: `risk_metrics[Sharpe_Ratio]`
-- Size: `company_summary[market_cap]`
-- Color: `company_summary[Risk_Category]`
+**Technical Indicators**:
+- RSI, MACD, moving averages
+- Bollinger Bands
+- Price patterns and trends
 
-**Market Cap Distribution (Treemap)**
-- Group: `company_summary[company_name]`
-- Values: `company_summary[market_cap]`
-- Color: `company_summary[Risk_Category]`
+**Risk Metrics**:
+- Volatility and beta
+- Sharpe ratio and VaR
+- Maximum drawdown
+- Risk categories
 
-#### 2. Technical Analysis Page
-**Stock Price Chart (Line Chart)**
-- X-axis: `stock_prices[date]`
-- Y-axis: `stock_prices[close]`
-- Legend: `stock_prices[ticker]`
 
-**RSI Analysis (Line Chart)**
-- X-axis: `technical_indicators[date]`
-- Y-axis: `technical_indicators[rsi]`
-- Reference lines: 30 (oversold), 70 (overbought)
-
-#### 3. Fundamental Analysis Page
-**P/E Ratios (Bar Chart)**
-- Axis: `company_summary[company_name]`
-- Values: `company_summary[pe_ratio]`
-
-**ROE Comparison (Bar Chart)**
-- Axis: `company_summary[company_name]`
-- Values: `company_summary[roe]`
-
-#### 4. Risk Analysis Page
-**Risk-Return Scatter Plot**
-- X-axis: `risk_metrics[Volatility]`
-- Y-axis: `risk_metrics[Annual_Return]`
-- Size: `company_summary[market_cap]`
-- Color: `risk_metrics[Risk_Level]`
-
-### Design Guidelines
-
-**Color Scheme**:
-- **Risk Levels**: 
-  - Low/Medium: Green (#00B050)
-  - High: Orange (#FF6600)
-  - Very High: Red (#C00000)
-- **Background**: Light gray (#F8F9FA)
-- **Text**: Dark gray (#212529)
-
-**Layout**:
-- Use **12-column grid**
-- **Consistent spacing** (10px margins)
-- **Card design** with subtle shadows
-- **Responsive sizing** for different screen sizes
 
 ## 🔧 Configuration
 
 ### Database Configuration
-Update `config.py` with your database settings:
+Update `scripts/config.py` with your database settings:
 ```python
 DB_HOST = "localhost"
 DB_PORT = 5432
@@ -364,7 +276,7 @@ DB_PASSWORD = "your_password"
 ```
 
 ### Analysis Parameters
-Customize analysis parameters in `config.py`:
+Customize analysis parameters in `scripts/config.py`:
 ```python
 # Technical Analysis Parameters
 RSI_PERIOD = 14
@@ -376,8 +288,7 @@ MACD_SIGNAL = 9
 VAR_CONFIDENCE = 0.95
 SHARPE_RISK_FREE_RATE = 0.02
 
-# Portfolio Optimization Parameters
-OPTIMIZATION_METHODS = ['sharpe', 'min_variance', 'max_return']
+
 ```
 
 ## 📊 Investment Analysis Protocol Followed
@@ -406,17 +317,13 @@ OPTIMIZATION_METHODS = ['sharpe', 'min_variance', 'max_return']
 - Risk-adjusted return metrics
 - Maximum drawdown analysis
 
-### 5. **Portfolio Optimization Phase**
-- Multi-objective optimization
-- Risk-return trade-off analysis
-- Diversification assessment
-- Backtesting and validation
+
 
 ### 6. **Recommendation Phase**
 - Comprehensive scoring system
 - Investment recommendations (Buy/Hold/Sell)
 - Risk warnings and disclaimers
-- Portfolio allocation suggestions
+
 
 ## 🔧 Technical Implementation
 
@@ -424,24 +331,24 @@ OPTIMIZATION_METHODS = ['sharpe', 'min_variance', 'max_return']
 - **pandas**: Data manipulation and analysis
 - **numpy**: Numerical computations
 - **yfinance**: Yahoo Finance data collection
-- **scikit-learn**: Machine learning and optimization
+- **scipy**: Statistical computations
 - **matplotlib/seaborn**: Data visualization
 - **psycopg2**: PostgreSQL database connection
 - **requests**: API data collection
 - **textblob**: Sentiment analysis
 
 ### Key Features
-- **Zero Duplication**: All analysis centralized in unified pipeline
-- **Comprehensive Data Export**: Complete PowerBI dataset
+- **Zero Duplication**: All analysis centralized in scripts/unified_pipeline.py
+- **Comprehensive Data Export**: Complete CSV dataset
 - **Robust Error Handling**: Graceful handling of API failures
 - **Scalable Architecture**: Easy to add new companies or metrics
 - **Professional Reporting**: Investment-grade analysis outputs
 
-### Complete PowerBI Dataset
-- ✅ 6 comprehensive CSV files
+### Complete Analysis Dataset
+- ✅ 4 comprehensive CSV files
 - ✅ All analysis results included
 - ✅ All relationships preserved
-- ✅ Ready for immediate PowerBI import
+- ✅ Ready for immediate analysis with any tool
 
 ### Maintainability Improved
 - ✅ Single source of truth
@@ -452,9 +359,9 @@ OPTIMIZATION_METHODS = ['sharpe', 'min_variance', 'max_return']
 ## 📈 Next Steps
 
 ### Immediate
-1. **✅ Test the unified pipeline**: `python3 main_unified.py` - **COMPLETED**
-2. **✅ Verify PowerBI data**: Check all 6 CSV files - **COMPLETED**
-3. **📊 Import to PowerBI**: Use the data for dashboard creation
+1. **✅ Test the unified pipeline**: `python3 main.py` - **COMPLETED**
+2. **✅ Verify analysis data**: Check all 4 CSV files - **COMPLETED**
+3. **📊 Use analysis data**: Import CSV files into your preferred analysis tool
 
 ### Future Enhancements
 1. **Add more companies**: Modify `self.companies` in `unified_pipeline.py`
@@ -462,30 +369,22 @@ OPTIMIZATION_METHODS = ['sharpe', 'min_variance', 'max_return']
 3. **Add database storage**: Optionally save results to database
 4. **Add real-time updates**: Schedule pipeline execution
 
-### PowerBI Setup
-1. Open PowerBI Desktop
-2. Import CSV files from `powerbi/data/` directory
-3. Follow the PowerBI setup guide in `powerbi/` directory
-4. Create your interactive dashboard!
-
 ## 🎉 Summary
 
 The **Unified Investment Analysis Pipeline** successfully achieves:
 
-✅ **Complete PowerBI Export** - All results included  
+✅ **Complete CSV Export** - All results included  
 ✅ **Better Maintainability** - Single source of truth  
 ✅ **Improved Performance** - No redundant calculations  
 ✅ **Enhanced Reliability** - Consistent results  
 
-**Ready to use**: `python3 main_unified.py`
+**Ready to use**: `python3 main.py`
 
 ---
 
 ## 📚 Additional Documentation
 
-- `powerbi/README.md` - PowerBI setup guide
-- `powerbi/PowerBI_Quick_Start.md` - 5-minute setup
-- `powerbi/PowerBI_Dashboard_Guide.md` - Comprehensive guide
-- `powerbi/sample_dashboard_structure.md` - Detailed structure
-- `unified_pipeline.py` - Main unified pipeline (928 lines)
-- `main_unified.py` - Simple execution script
+- `unified_pipeline.py` - Main unified pipeline
+- `main.py` - Simple execution script
+- `config.py` - Configuration settings
+- `database.py` - Database operations (optional)
