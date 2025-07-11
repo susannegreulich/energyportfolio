@@ -1,6 +1,6 @@
 # Renewable Energy Investment Analysis Project
 
-A comprehensive investment analysis system for the top 10 renewable energy companies, built with Python and SQL. This project provides detailed technical, fundamental, and risk analysis using a **Unified Pipeline** approach.
+An investment analysis project for the top 10 renewable energy companies, built with Python and SQL. This project provides technical, fundamental, and risk analysis metrics.
 
 ## 🎯 Project Overview
 
